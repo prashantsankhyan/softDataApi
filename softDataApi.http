@@ -1,0 +1,6 @@
+@softDataApi_HostAddress = http://localhost:5105
+
+GET {{softDataApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
