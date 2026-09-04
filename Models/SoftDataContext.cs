@@ -20,12 +20,24 @@ public partial class SoftDataContext : DbContext
 
     public virtual DbSet<SaleHeading> SaleHeadings { get; set; }
     public DbSet<SaleHeadingDto> SaleHeadingDto { get; set; }
+
+    public DbSet<purchaseById> purchaseById { get; set; }
+
+    
+    public DbSet<purchaseDto> purchaseDto { get; set; }
+
     public DbSet<SaleHeadingById> SaleHeadingById { get; set; }
 
     public virtual DbSet<SaleInvoice> SaleInvoices { get; set; }
 
     public DbSet<NextInvoiceNoDto> NextInvoiceNo { get; set; }
+
+    public DbSet<NextInvoiceHeadingNoDto> NextInvoiceHeadingNoDtos { get; set; }
     public virtual DbSet<SaleInvoiceDetail> SaleInvoiceDetails { get; set; }
+
+    public virtual DbSet<PurchaseInvoice> PurchaseInvoices { get; set; }
+
+    public virtual DbSet<PurchaseInvoiceDetail> PurchaseInvoiceDetails { get; set; }
 
     public virtual DbSet<ScreenManagement> ScreenManagements { get; set; }
 
@@ -80,6 +92,8 @@ public partial class SoftDataContext : DbContext
     public DbSet<ItemGroupMasterById> ItemGroupMasterById { get; set; }
 
     public DbSet<ApiResponse> ApiResponses { get; set; }
+
+    public DbSet<PurchaseInvoiceApiResponse> PurchaseInvoiceApiResponses { get; set; }
     public virtual DbSet<TbItemMaster> TbItemMasters { get; set; }
 
     public virtual DbSet<TbStateMaster> TbStateMasters { get; set; }
@@ -94,6 +108,7 @@ public partial class SoftDataContext : DbContext
 
     public virtual DbSet<PaymentReceiptResponse> PaymentReceiptResponse { get; set; }
     public DbSet<AccountDuplicateCheckDto> AccountDuplicateCheckDto { get; set; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -202,6 +217,7 @@ public partial class SoftDataContext : DbContext
             entity.Property(e => e.Weight).HasMaxLength(50);
         });
         modelBuilder.Entity<NextInvoiceNoDto>().HasNoKey();
+        modelBuilder.Entity<NextInvoiceHeadingNoDto>().HasNoKey();
         modelBuilder.Entity<SaleInvoiceDetail>(entity =>
         {
             entity.HasKey(e => e.SaleInvoiceDetailId).HasName("PK__SaleInvo__069C4C09D2C5F7E1");
@@ -711,6 +727,10 @@ public partial class SoftDataContext : DbContext
         modelBuilder.Entity<ItemMasterListDto>().HasNoKey();
         modelBuilder.Entity<DbMessageDto>().HasNoKey();
         modelBuilder.Entity<ApiResponse>().HasNoKey();
+
+        modelBuilder.Entity<PurchaseInvoiceApiResponse>().HasNoKey();
+
+        
         modelBuilder.Entity<PaymentReceiptResponse>().HasNoKey();
         modelBuilder.Entity<TbStateMaster>(entity =>
         {
