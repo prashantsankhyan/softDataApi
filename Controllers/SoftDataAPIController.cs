@@ -2929,6 +2929,38 @@ namespace softDataApi.Controllers
             }
         }
 
+        //[HttpGet("get-all-item-master/{companyId}")]
+        //public async Task<IActionResult> GetAllItemMaster(int companyId)
+        //{
+        //    try
+        //    {
+        //        var companyIdParam = new SqlParameter("@companyId", companyId);
+
+        //        var data = await context.Set<ItemMasterListDto>()
+        //            .FromSqlRaw(
+        //                "EXEC dbo.getAllItemMasterData @companyId",
+        //                companyIdParam)
+        //            .AsNoTracking()
+        //            .ToListAsync();
+
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            count = data.Count,
+        //            data
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new
+        //        {
+        //            success = false,
+        //            message = "Internal server error",
+        //            error = ex.Message
+        //        });
+        //    }
+        //}
+
         [HttpGet("get-all-item-master/{companyId}")]
         public async Task<IActionResult> GetAllItemMaster(int companyId)
         {
@@ -2960,6 +2992,7 @@ namespace softDataApi.Controllers
                 });
             }
         }
+
 
         [HttpGet("get-item-by-id/{itemId}")]
         public async Task<IActionResult> GetItemById(int itemId)
@@ -3053,6 +3086,260 @@ namespace softDataApi.Controllers
                 {
                     success = false,
                     message = "Internal server error",
+                    error = ex.Message
+                });
+            }
+        }
+
+
+        [HttpGet("get-item-wise-stock")]
+        public async Task<IActionResult> GetItemWiseStock(
+      int companyId,
+      int? itemId = null,
+      DateTime? fromDate = null,
+      DateTime? toDate = null)
+        {
+            try
+            {
+                var stock = new List<ItemWiseStockDto>();
+                var transactions = new List<ItemWiseStockTransactionDto>();
+
+                using var conn = context.Database.GetDbConnection();
+
+                await conn.OpenAsync();
+
+                using var cmd = conn.CreateCommand();
+
+                cmd.CommandText = "dbo.sp_GetItemWiseStock";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                // =====================================================
+                // COMPANY ID
+                // =====================================================
+
+                var companyParam = cmd.CreateParameter();
+                companyParam.ParameterName = "@CompanyId";
+                companyParam.Value = companyId;
+                cmd.Parameters.Add(companyParam);
+
+
+                // =====================================================
+                // ITEM ID
+                // =====================================================
+
+                var itemParam = cmd.CreateParameter();
+                itemParam.ParameterName = "@ItemId";
+                itemParam.Value = itemId.HasValue
+                    ? itemId.Value
+                    : DBNull.Value;
+
+                cmd.Parameters.Add(itemParam);
+
+
+                // =====================================================
+                // FROM DATE
+                // =====================================================
+
+                var fromDateParam = cmd.CreateParameter();
+                fromDateParam.ParameterName = "@FromDate";
+                fromDateParam.Value = fromDate.HasValue
+                    ? fromDate.Value.Date
+                    : DBNull.Value;
+
+                cmd.Parameters.Add(fromDateParam);
+
+
+                // =====================================================
+                // TO DATE
+                // =====================================================
+
+                var toDateParam = cmd.CreateParameter();
+                toDateParam.ParameterName = "@ToDate";
+                toDateParam.Value = toDate.HasValue
+                    ? toDate.Value.Date
+                    : DBNull.Value;
+
+                cmd.Parameters.Add(toDateParam);
+
+
+                // =====================================================
+                // EXECUTE STORED PROCEDURE
+                // =====================================================
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+
+                // =====================================================
+                // RESULT SET 1
+                // ITEM-WISE STOCK SUMMARY
+                // =====================================================
+
+                while (await reader.ReadAsync())
+                {
+                    stock.Add(new ItemWiseStockDto
+                    {
+                        ItemId = reader["ItemId"] == DBNull.Value
+                            ? 0
+                            : Convert.ToInt32(reader["ItemId"]),
+
+                        ItemName = reader["ItemName"] == DBNull.Value
+                            ? null
+                            : reader["ItemName"].ToString(),
+
+                        Description = reader["Description"] == DBNull.Value
+                            ? null
+                            : reader["Description"].ToString(),
+
+                        Unit = reader["Unit"] == DBNull.Value
+                            ? null
+                            : reader["Unit"].ToString(),
+
+                        Hsn = reader["Hsn"] == DBNull.Value
+                            ? null
+                            : reader["Hsn"].ToString(),
+
+                        MasterOpeningQty = reader["MasterOpeningQty"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(reader["MasterOpeningQty"]),
+
+                        PreviousPurchaseQty = reader["PreviousPurchaseQty"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(reader["PreviousPurchaseQty"]),
+
+                        PreviousSaleQty = reader["PreviousSaleQty"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(reader["PreviousSaleQty"]),
+
+                        OpeningQty = reader["OpeningQty"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(reader["OpeningQty"]),
+
+                        PurchaseQty = reader["PurchaseQty"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(reader["PurchaseQty"]),
+
+                        SaleQty = reader["SaleQty"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(reader["SaleQty"]),
+
+                        NetQty = reader["NetQty"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(reader["NetQty"]),
+
+                        ClosingQty = reader["ClosingQty"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(reader["ClosingQty"]),
+
+                        PurchaseValue = reader["PurchaseValue"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(reader["PurchaseValue"]),
+
+                        SaleValue = reader["SaleValue"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(reader["SaleValue"])
+                    });
+                }
+
+
+                // =====================================================
+                // MOVE TO RESULT SET 2
+                // PURCHASE + SALE TRANSACTIONS
+                // =====================================================
+
+                if (await reader.NextResultAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        transactions.Add(new ItemWiseStockTransactionDto
+                        {
+                            TransactionType =
+                                reader["TransactionType"] == DBNull.Value
+                                    ? null
+                                    : reader["TransactionType"].ToString(),
+
+                            ItemId =
+                                reader["ItemId"] == DBNull.Value
+                                    ? 0
+                                    : Convert.ToInt32(reader["ItemId"]),
+
+                            ItemName =
+                                reader["ItemName"] == DBNull.Value
+                                    ? null
+                                    : reader["ItemName"].ToString(),
+
+                            InvoiceId =
+                                reader["InvoiceId"] == DBNull.Value
+                                    ? 0
+                                    : Convert.ToInt32(reader["InvoiceId"]),
+
+                            InvoiceNo =
+                                reader["InvoiceNo"] == DBNull.Value
+                                    ? null
+                                    : reader["InvoiceNo"].ToString(),
+
+                            InvoiceDate =
+                                reader["InvoiceDate"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToDateTime(reader["InvoiceDate"]),
+
+                            Qty =
+                                reader["Qty"] == DBNull.Value
+                                    ? 0
+                                    : Convert.ToDecimal(reader["Qty"]),
+
+                            Rate =
+                                reader["Rate"] == DBNull.Value
+                                    ? 0
+                                    : Convert.ToDecimal(reader["Rate"]),
+
+                            Amount =
+                                reader["Amount"] == DBNull.Value
+                                    ? 0
+                                    : Convert.ToDecimal(reader["Amount"])
+                        });
+                    }
+                }
+
+
+                // =====================================================
+                // FINAL RESPONSE
+                // =====================================================
+
+                return Ok(new
+                {
+                    success = true,
+
+                    companyId = companyId,
+
+                    itemId = itemId,
+
+                    fromDate = fromDate,
+
+                    toDate = toDate,
+
+                    count = stock.Count,
+
+                    transactionCount = transactions.Count,
+
+                    data = stock,
+
+                    transactions = transactions
+                });
+            }
+            catch (SqlException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Failed to fetch item wise stock",
                     error = ex.Message
                 });
             }
