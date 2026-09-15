@@ -43,6 +43,10 @@ public partial class ScreenManagement
     public string? TermAndConditionPurchase { get; set; }
     public string? WhatWeDoInPurchase { get; set; }
     public string? DescriptionPurchase { get; set; }
+
+    public bool SaleOfNegativeStock { get; set; }
+    public bool ShowMoreDetailsSale { get; set; }
+    public bool ShowMoreDetailsPurchase { get; set; }
 }
 public class CommonSpResponseWithId
 {

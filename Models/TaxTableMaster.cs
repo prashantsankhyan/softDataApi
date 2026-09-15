@@ -64,6 +64,10 @@ public class TaxTableDetailsDto
     public int? SalePurcAccountId { get; set; }
     public string? SalePurcAccountName { get; set; }
 
+    public string? GstVatClassName { get; set; }
+
+    
+
     public string? SelectType { get; set; }
     public string? UnderVatReturn { get; set; }
 

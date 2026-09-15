@@ -2093,7 +2093,6 @@ namespace softDataApi.Controllers
         }
 
 
-
         [HttpPost("gst-vat-account-add-edit")]
         public IActionResult AddEditGstVatAccount([FromBody] GstVatAccout model)
         {
@@ -2102,15 +2101,21 @@ namespace softDataApi.Controllers
                 var result = context.CommonSpResponse
                     .FromSqlRaw(
                         "EXEC dbo.addEditGstVatAccount @id, @companyId, @className, @rate, @headingName, @type",
+
                         new SqlParameter("@id", model.Id),
+
                         new SqlParameter("@companyId", model.CompanyId),
-                        new SqlParameter("@className", model.ClassName),
+
+                        new SqlParameter("@className", model.ClassName ?? ""),
+
                         new SqlParameter("@rate", model.Rate),
+
                         new SqlParameter("@headingName", model.HeadingName),
-                        new SqlParameter("@type", model.Type)
+
+                        new SqlParameter("@type", model.Type ?? "")
                     )
                     .AsNoTracking()
-                    .AsEnumerable()     // ✅ important for EXEC
+                    .AsEnumerable()
                     .FirstOrDefault();
 
                 return Ok(result);
@@ -2120,28 +2125,34 @@ namespace softDataApi.Controllers
                 return StatusCode(500, new
                 {
                     success = 0,
-                    message = ex.Message
+                    message = ex.Message,
+                    innerError = ex.InnerException?.Message
                 });
             }
         }
+
+
+
         [HttpGet("gst-vat-account-by-company/{companyId}")]
-        public IActionResult GetGstVatAccountByCompanyId(int companyId)
+public IActionResult GetGstVatAccountByCompanyId(int companyId)
         {
             try
             {
+                var companyIdParameter = new SqlParameter("@companyId", companyId);
+
                 var result = context.GstVatAccountList
                     .FromSqlRaw(
                         "EXEC dbo.getGstVatAccountByCompanyId @companyId",
-                        new SqlParameter("@companyId", companyId)
+                        companyIdParameter
                     )
                     .AsNoTracking()
-                    .AsEnumerable()   // ✅ required for EXEC
                     .ToList();
 
                 return Ok(new
                 {
                     success = true,
-                    data = result
+                    data = result,
+                    count = result.Count
                 });
             }
             catch (Exception ex)
@@ -2149,10 +2160,17 @@ namespace softDataApi.Controllers
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = ex.Message
+                    message = "Failed to fetch GST/VAT account.",
+                    error = ex.Message
                 });
             }
         }
+
+
+
+
+
+
         [HttpGet("gst-vat-account-by-id/{id}")]
         public IActionResult GetGstVatAccountById(int id)
         {
@@ -2164,7 +2182,7 @@ namespace softDataApi.Controllers
                         new SqlParameter("@id", id)
                     )
                     .AsNoTracking()
-                    .AsEnumerable()    // ✅ required for EXEC
+                    .AsEnumerable()
                     .FirstOrDefault();
 
                 if (result == null)
@@ -2172,14 +2190,30 @@ namespace softDataApi.Controllers
                     return Ok(new
                     {
                         success = false,
-                        message = "GST/VAT account not found"
+                        message = "GST/VAT account not found.",
+                        data = (object?)null,
+                        canEdit = false
+                    });
+                }
+
+                // IDs 1-4 are permanent system records
+                if (result.Id >= 1 && result.Id <= 4)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "This is a system master record and cannot be modified.",
+                        data = result,
+                        canEdit = false
                     });
                 }
 
                 return Ok(new
                 {
                     success = true,
-                    data = result
+                    message = "GST/VAT account can be updated.",
+                    data = result,
+                    canEdit = true
                 });
             }
             catch (Exception ex)
@@ -2187,7 +2221,9 @@ namespace softDataApi.Controllers
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = ex.Message
+                    message = "Unable to load GST/VAT account for editing.",
+                    error = ex.Message,
+                    data = (object?)null
                 });
             }
         }
@@ -2660,86 +2696,239 @@ namespace softDataApi.Controllers
         }
 
 
+        //   [HttpPost("screen-management-save-update")]
+        //   public async Task<IActionResult> SaveOrUpdateScreenManagement(
+        //[FromBody] ScreenManagement model)
+        //   {
+        //       try
+        //       {
+        //           var list = await context.Database
+        //               .SqlQueryRaw<CommonSpResponseWithId>(
+        //                   @"EXEC dbo.SaveOrUpdateScreenManagement
+        //           @ScreenId,
+        //           @CompanyId,
+
+        //           @RemarksSale,
+        //           @HSNSale,
+        //           @ArtSale,
+        //           @SizeSale,
+        //           @ColorSale,
+        //           @Pack1Sale,
+        //           @Pack2Sale,
+        //           @mRateSale,
+
+        //           @BarcodeSale,
+        //           @DiscPercentSale,
+        //           @DiscountSale,
+        //           @TermAndConditionSale,
+        //           @WhatWeDoInSale,
+        //           @DescriptionSale,
+
+        //           @RemarksPurchase,
+        //           @HSNPurchase,
+        //           @ArtPurchase,
+        //           @SizePurchase,
+        //           @ColorPurchase,
+        //           @Pack1Purchase,
+        //           @Pack2Purchase,
+        //           @mRatePurchase,
+
+        //           @BarcodePurchase,
+        //           @DiscPercentPurchase,
+        //           @DiscountPurchase,
+        //           @TermAndConditionPurchase,
+        //           @WhatWeDoInPurchase,
+        //           @DescriptionPurchase",
+
+        //                   new SqlParameter("@ScreenId", model.ScreenId),
+        //                   new SqlParameter("@CompanyId", model.CompanyId),
+
+        //                   new SqlParameter("@RemarksSale", (object?)model.RemarksSale ?? DBNull.Value),
+        //                   new SqlParameter("@HSNSale", (object?)model.HSNSale ?? DBNull.Value),
+        //                   new SqlParameter("@ArtSale", (object?)model.ArtSale ?? DBNull.Value),
+        //                   new SqlParameter("@SizeSale", (object?)model.SizeSale ?? DBNull.Value),
+        //                   new SqlParameter("@ColorSale", (object?)model.ColorSale ?? DBNull.Value),
+        //                   new SqlParameter("@Pack1Sale", (object?)model.Pack1Sale ?? DBNull.Value),
+        //                   new SqlParameter("@Pack2Sale", (object?)model.Pack2Sale ?? DBNull.Value),
+        //                   new SqlParameter("@mRateSale", (object?)model.mRateSale ?? DBNull.Value),
+
+        //                   new SqlParameter("@BarcodeSale", (object?)model.BarcodeSale ?? DBNull.Value),
+        //                   new SqlParameter("@DiscPercentSale", (object?)model.DiscPercentSale ?? DBNull.Value),
+        //                   new SqlParameter("@DiscountSale", (object?)model.DiscountSale ?? DBNull.Value),
+
+        //                   new SqlParameter("@TermAndConditionSale", (object?)model.TermAndConditionSale ?? DBNull.Value),
+        //                   new SqlParameter("@WhatWeDoInSale", (object?)model.WhatWeDoInSale ?? DBNull.Value),
+        //                   new SqlParameter("@DescriptionSale", (object?)model.DescriptionSale ?? DBNull.Value),
+
+        //                   new SqlParameter("@RemarksPurchase", (object?)model.RemarksPurchase ?? DBNull.Value),
+        //                   new SqlParameter("@HSNPurchase", (object?)model.HSNPurchase ?? DBNull.Value),
+        //                   new SqlParameter("@ArtPurchase", (object?)model.ArtPurchase ?? DBNull.Value),
+        //                   new SqlParameter("@SizePurchase", (object?)model.SizePurchase ?? DBNull.Value),
+        //                   new SqlParameter("@ColorPurchase", (object?)model.ColorPurchase ?? DBNull.Value),
+        //                   new SqlParameter("@Pack1Purchase", (object?)model.Pack1Purchase ?? DBNull.Value),
+        //                   new SqlParameter("@Pack2Purchase", (object?)model.Pack2Purchase ?? DBNull.Value),
+        //                   new SqlParameter("@mRatePurchase", (object?)model.mRatePurchase ?? DBNull.Value),
+
+        //                   new SqlParameter("@BarcodePurchase", (object?)model.BarcodePurchase ?? DBNull.Value),
+        //                   new SqlParameter("@DiscPercentPurchase", (object?)model.DiscPercentPurchase ?? DBNull.Value),
+        //                   new SqlParameter("@DiscountPurchase", (object?)model.DiscountPurchase ?? DBNull.Value),
+
+        //                   new SqlParameter("@TermAndConditionPurchase", (object?)model.TermAndConditionPurchase ?? DBNull.Value),
+        //                   new SqlParameter("@WhatWeDoInPurchase", (object?)model.WhatWeDoInPurchase ?? DBNull.Value),
+        //                   new SqlParameter("@DescriptionPurchase", (object?)model.DescriptionPurchase ?? DBNull.Value)
+        //               )
+        //               .ToListAsync();
+
+        //           var result = list.FirstOrDefault();
+
+        //           if (result == null)
+        //           {
+        //               return Ok(new
+        //               {
+        //                   success = false,
+        //                   message = "Operation failed"
+        //               });
+        //           }
+
+        //           return Ok(new
+        //           {
+        //               success = result.Success == 1,
+        //               message = result.Message,
+        //               newId = result.NewId
+        //           });
+        //       }
+        //       catch (Exception ex)
+        //       {
+        //           return StatusCode(500, new
+        //           {
+        //               success = false,
+        //               message = ex.Message,
+        //               inner = ex.InnerException?.Message
+        //           });
+        //       }
+        //   }
+
         [HttpPost("screen-management-save-update")]
         public async Task<IActionResult> SaveOrUpdateScreenManagement(
-     [FromBody] ScreenManagement model)
+    [FromBody] ScreenManagement model)
         {
             try
             {
                 var list = await context.Database
                     .SqlQueryRaw<CommonSpResponseWithId>(
                         @"EXEC dbo.SaveOrUpdateScreenManagement
-                @ScreenId,
-                @CompanyId,
+                    @ScreenId,
+                    @CompanyId,
 
-                @RemarksSale,
-                @HSNSale,
-                @ArtSale,
-                @SizeSale,
-                @ColorSale,
-                @Pack1Sale,
-                @Pack2Sale,
-                @mRateSale,
+                    @RemarksSale,
+                    @HSNSale,
+                    @ArtSale,
+                    @SizeSale,
+                    @ColorSale,
+                    @Pack1Sale,
+                    @Pack2Sale,
+                    @mRateSale,
 
-                @BarcodeSale,
-                @DiscPercentSale,
-                @DiscountSale,
-                @TermAndConditionSale,
-                @WhatWeDoInSale,
-                @DescriptionSale,
+                    @BarcodeSale,
+                    @DiscPercentSale,
+                    @DiscountSale,
+                    @TermAndConditionSale,
+                    @WhatWeDoInSale,
+                    @DescriptionSale,
 
-                @RemarksPurchase,
-                @HSNPurchase,
-                @ArtPurchase,
-                @SizePurchase,
-                @ColorPurchase,
-                @Pack1Purchase,
-                @Pack2Purchase,
-                @mRatePurchase,
+                    -- NEW SALE SETTINGS
+                    @SaleOfNegativeStock,
+                    @ShowMoreDetailsSale,
 
-                @BarcodePurchase,
-                @DiscPercentPurchase,
-                @DiscountPurchase,
-                @TermAndConditionPurchase,
-                @WhatWeDoInPurchase,
-                @DescriptionPurchase",
+                    @RemarksPurchase,
+                    @HSNPurchase,
+                    @ArtPurchase,
+                    @SizePurchase,
+                    @ColorPurchase,
+                    @Pack1Purchase,
+                    @Pack2Purchase,
+                    @mRatePurchase,
+
+                    @BarcodePurchase,
+                    @DiscPercentPurchase,
+                    @DiscountPurchase,
+                    @TermAndConditionPurchase,
+                    @WhatWeDoInPurchase,
+                    @DescriptionPurchase,
+
+                    -- NEW PURCHASE SETTINGS
+                    @ShowMoreDetailsPurchase",
 
                         new SqlParameter("@ScreenId", model.ScreenId),
                         new SqlParameter("@CompanyId", model.CompanyId),
 
-                        new SqlParameter("@RemarksSale", (object?)model.RemarksSale ?? DBNull.Value),
-                        new SqlParameter("@HSNSale", (object?)model.HSNSale ?? DBNull.Value),
-                        new SqlParameter("@ArtSale", (object?)model.ArtSale ?? DBNull.Value),
-                        new SqlParameter("@SizeSale", (object?)model.SizeSale ?? DBNull.Value),
-                        new SqlParameter("@ColorSale", (object?)model.ColorSale ?? DBNull.Value),
-                        new SqlParameter("@Pack1Sale", (object?)model.Pack1Sale ?? DBNull.Value),
-                        new SqlParameter("@Pack2Sale", (object?)model.Pack2Sale ?? DBNull.Value),
-                        new SqlParameter("@mRateSale", (object?)model.mRateSale ?? DBNull.Value),
+                        new SqlParameter("@RemarksSale", model.RemarksSale),
+                        new SqlParameter("@HSNSale", model.HSNSale),
+                        new SqlParameter("@ArtSale", model.ArtSale),
+                        new SqlParameter("@SizeSale", model.SizeSale),
+                        new SqlParameter("@ColorSale", model.ColorSale),
+                        new SqlParameter("@Pack1Sale", model.Pack1Sale),
+                        new SqlParameter("@Pack2Sale", model.Pack2Sale),
+                        new SqlParameter("@mRateSale", model.mRateSale),
 
-                        new SqlParameter("@BarcodeSale", (object?)model.BarcodeSale ?? DBNull.Value),
-                        new SqlParameter("@DiscPercentSale", (object?)model.DiscPercentSale ?? DBNull.Value),
-                        new SqlParameter("@DiscountSale", (object?)model.DiscountSale ?? DBNull.Value),
+                        new SqlParameter("@BarcodeSale", model.BarcodeSale),
+                        new SqlParameter("@DiscPercentSale", model.DiscPercentSale),
+                        new SqlParameter("@DiscountSale", model.DiscountSale),
 
-                        new SqlParameter("@TermAndConditionSale", (object?)model.TermAndConditionSale ?? DBNull.Value),
-                        new SqlParameter("@WhatWeDoInSale", (object?)model.WhatWeDoInSale ?? DBNull.Value),
-                        new SqlParameter("@DescriptionSale", (object?)model.DescriptionSale ?? DBNull.Value),
+                        new SqlParameter(
+                            "@TermAndConditionSale",
+                            (object?)model.TermAndConditionSale ?? DBNull.Value
+                        ),
+                        new SqlParameter(
+                            "@WhatWeDoInSale",
+                            (object?)model.WhatWeDoInSale ?? DBNull.Value
+                        ),
+                        new SqlParameter(
+                            "@DescriptionSale",
+                            (object?)model.DescriptionSale ?? DBNull.Value
+                        ),
 
-                        new SqlParameter("@RemarksPurchase", (object?)model.RemarksPurchase ?? DBNull.Value),
-                        new SqlParameter("@HSNPurchase", (object?)model.HSNPurchase ?? DBNull.Value),
-                        new SqlParameter("@ArtPurchase", (object?)model.ArtPurchase ?? DBNull.Value),
-                        new SqlParameter("@SizePurchase", (object?)model.SizePurchase ?? DBNull.Value),
-                        new SqlParameter("@ColorPurchase", (object?)model.ColorPurchase ?? DBNull.Value),
-                        new SqlParameter("@Pack1Purchase", (object?)model.Pack1Purchase ?? DBNull.Value),
-                        new SqlParameter("@Pack2Purchase", (object?)model.Pack2Purchase ?? DBNull.Value),
-                        new SqlParameter("@mRatePurchase", (object?)model.mRatePurchase ?? DBNull.Value),
+                        // NEW SALE SETTINGS
+                        new SqlParameter(
+                            "@SaleOfNegativeStock",
+                            model.SaleOfNegativeStock
+                        ),
+                        new SqlParameter(
+                            "@ShowMoreDetailsSale",
+                            model.ShowMoreDetailsSale
+                        ),
 
-                        new SqlParameter("@BarcodePurchase", (object?)model.BarcodePurchase ?? DBNull.Value),
-                        new SqlParameter("@DiscPercentPurchase", (object?)model.DiscPercentPurchase ?? DBNull.Value),
-                        new SqlParameter("@DiscountPurchase", (object?)model.DiscountPurchase ?? DBNull.Value),
+                        new SqlParameter("@RemarksPurchase", model.RemarksPurchase),
+                        new SqlParameter("@HSNPurchase", model.HSNPurchase),
+                        new SqlParameter("@ArtPurchase", model.ArtPurchase),
+                        new SqlParameter("@SizePurchase", model.SizePurchase),
+                        new SqlParameter("@ColorPurchase", model.ColorPurchase),
+                        new SqlParameter("@Pack1Purchase", model.Pack1Purchase),
+                        new SqlParameter("@Pack2Purchase", model.Pack2Purchase),
+                        new SqlParameter("@mRatePurchase", model.mRatePurchase),
 
-                        new SqlParameter("@TermAndConditionPurchase", (object?)model.TermAndConditionPurchase ?? DBNull.Value),
-                        new SqlParameter("@WhatWeDoInPurchase", (object?)model.WhatWeDoInPurchase ?? DBNull.Value),
-                        new SqlParameter("@DescriptionPurchase", (object?)model.DescriptionPurchase ?? DBNull.Value)
+                        new SqlParameter("@BarcodePurchase", model.BarcodePurchase),
+                        new SqlParameter("@DiscPercentPurchase", model.DiscPercentPurchase),
+                        new SqlParameter("@DiscountPurchase", model.DiscountPurchase),
+
+                        new SqlParameter(
+                            "@TermAndConditionPurchase",
+                            (object?)model.TermAndConditionPurchase ?? DBNull.Value
+                        ),
+                        new SqlParameter(
+                            "@WhatWeDoInPurchase",
+                            (object?)model.WhatWeDoInPurchase ?? DBNull.Value
+                        ),
+                        new SqlParameter(
+                            "@DescriptionPurchase",
+                            (object?)model.DescriptionPurchase ?? DBNull.Value
+                        ),
+
+                        // NEW PURCHASE SETTINGS
+                        new SqlParameter(
+                            "@ShowMoreDetailsPurchase",
+                            model.ShowMoreDetailsPurchase
+                        )
                     )
                     .ToListAsync();
 
@@ -2772,6 +2961,45 @@ namespace softDataApi.Controllers
             }
         }
 
+        //[HttpGet("screen-management-by-company/{companyId}")]
+        //public async Task<IActionResult> GetScreenManagementByCompanyId(int companyId)
+        //{
+        //    try
+        //    {
+        //        var list = await context.Database
+        //            .SqlQueryRaw<ScreenManagement>(
+        //                @"EXEC dbo.GetScreenManagementByCompanyId @CompanyId",
+        //                new SqlParameter("@CompanyId", companyId)
+        //            )
+        //            .ToListAsync();   // 🔥 BREAK COMPOSITION
+
+        //        if (list == null || list.Count == 0)
+        //        {
+        //            return Ok(new
+        //            {
+        //                success = false,
+        //                message = "No screen management data found"
+        //            });
+        //        }
+
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            data = list
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new
+        //        {
+        //            success = false,
+        //            message = ex.Message
+        //        });
+        //    }
+        //}
+
+
+
         [HttpGet("screen-management-by-company/{companyId}")]
         public async Task<IActionResult> GetScreenManagementByCompanyId(int companyId)
         {
@@ -2782,7 +3010,7 @@ namespace softDataApi.Controllers
                         @"EXEC dbo.GetScreenManagementByCompanyId @CompanyId",
                         new SqlParameter("@CompanyId", companyId)
                     )
-                    .ToListAsync();   // 🔥 BREAK COMPOSITION
+                    .ToListAsync();
 
                 if (list == null || list.Count == 0)
                 {
@@ -3718,7 +3946,10 @@ namespace softDataApi.Controllers
                 var param = new SqlParameter("@companyId", companyId);
 
                 var data = await context.AccountListDto
-                    .FromSqlRaw("EXEC dbo.sp_GetAccountsByCompanyId @companyId", param)
+                    .FromSqlRaw(
+                        "EXEC dbo.sp_GetAccountsByCompanyId @companyId",
+                        param
+                    )
                     .AsNoTracking()
                     .ToListAsync();
 
@@ -4473,8 +4704,155 @@ namespace softDataApi.Controllers
 
 
 
-        [HttpGet("get-sale-invoice-For-Pdf-id/{id}")]
-        public async Task<IActionResult> GetSaleInvoiceForPdfById(int id)
+        //[HttpGet("get-sale-invoice-For-Pdf-id/{id}")]
+        //public async Task<IActionResult> GetSaleInvoiceForPdfById(int id)
+        //{
+        //    try
+        //    {
+        //        var header = new SaleInvoiceHeaderPdf();
+        //        var details = new List<SaleInvoiceDetailDtoPdf>();
+
+        //        using var conn = context.Database.GetDbConnection();
+        //        await conn.OpenAsync();
+
+        //        using var cmd = conn.CreateCommand();
+        //        cmd.CommandText = "dbo.GetSaleInvoiceByIdForPDF";
+        //        cmd.CommandType = CommandType.StoredProcedure;
+
+        //        var param = cmd.CreateParameter();
+        //        param.ParameterName = "@SaleInvoiceId";
+        //        param.Value = id;
+        //        cmd.Parameters.Add(param);
+
+        //        using var reader = await cmd.ExecuteReaderAsync();
+
+        //        // -----------------------------
+        //        // 1. Read Header
+        //        // -----------------------------
+        //        if (await reader.ReadAsync())
+        //        {
+        //            header.SaleInvoiceId = Convert.ToInt32(reader["SaleInvoiceId"]);
+        //            header.InvoiceHeading = reader["InvoiceHeading"]?.ToString();
+        //            header.CompanyId = Convert.ToInt32(reader["CompanyId"]);
+        //            header.InvoiceNo = reader["InvoiceNo"]?.ToString();
+        //            header.InvoiceDate = reader["InvoiceDate"] as DateTime?;
+        //            header.AccountId = Convert.ToInt32(reader["AccountId"]);
+        //            header.accountName = reader["accountName"]?.ToString();
+        //            header.companyPhone = reader["companyPhone"]?.ToString();
+        //            header.companyName = reader["companyName"]?.ToString();
+        //            header.cityName = reader["cityName"]?.ToString();
+        //            header.stateName = reader["stateName"]?.ToString();
+        //            header.ShipToPhone = reader["ShipToPhone"]?.ToString();
+        //            header.stateCode = reader["stateCode"]?.ToString();
+        //            header.OrderNo = reader["OrderNo"]?.ToString();
+        //            header.TransportName = reader["TransportName"]?.ToString();
+        //            header.TransportPhone = reader["TransportPhone"]?.ToString();
+        //            header.TransportGSTNo = reader["TransportGSTNo"]?.ToString();
+        //            header.TransportNameManual = reader["TransportNameManual"]?.ToString();
+        //            header.ShippingBillNo = reader["ShippingBillNo"]?.ToString();
+        //            header.GRNo = reader["GRNo"]?.ToString();
+        //            header.swachBharat = reader["swachBharat"] as decimal?;
+        //            header.tcs = reader["tcs"] as decimal?;
+        //            header.localGst = reader["localGst"] as decimal?;
+        //            header.centralGst = reader["centralGst"] as decimal?;
+                    
+
+        //            header.SubTotal = reader["SubTotal"] as decimal?;
+        //            header.RoundAndTotal = reader["RoundAndTotal"] as decimal?;
+        //            header.ShipToName = reader["ShipToName"]?.ToString();
+        //            header.Value = reader["Value"] as decimal?;
+
+        //            header.OtherChargeName = reader["OtherChargeName"]?.ToString();
+        //            header.Value1 = reader["Value1"] as decimal?;
+
+        //            header.OtherCharge1Name = reader["OtherCharge1Name"]?.ToString();
+
+
+        //        }
+
+        //        // If invoice not found
+        //        if (header.SaleInvoiceId == 0)
+        //        {
+        //            return NotFound(new
+        //            {
+        //                success = false,
+        //                message = "Invoice not found"
+        //            });
+        //        }
+
+        //        // -----------------------------
+        //        // 2. Read Details
+        //        // -----------------------------
+        //        if (await reader.NextResultAsync())
+        //        {
+        //            while (await reader.ReadAsync())
+        //            {
+        //                details.Add(new SaleInvoiceDetailDtoPdf
+        //                {
+        //                    SaleInvoiceDetailId = Convert.ToInt32(reader["SaleInvoiceDetailId"]),
+        //                    Barcode = reader["Barcode"]?.ToString(),
+        //                    ItemId = Convert.ToInt32(reader["ItemId"]),
+        //                    ItemName = reader["ItemName"]?.ToString(),
+        //                    Remarks = reader["Remarks"]?.ToString(),
+        //                    HSN = reader["HSN"]?.ToString(),
+        //                    ArtNo = reader["ArtNo"]?.ToString(),
+        //                    Size = reader["Size"]?.ToString(),
+        //                    Color = reader["Color"]?.ToString(),
+        //                    Pack1 = reader["Pack1"]?.ToString(),
+        //                    Pack2 = reader["Pack2"]?.ToString(),
+        //                    Qty = reader["Qty"] as decimal?,
+        //                    Rate = reader["Rate"] as decimal?,
+        //                    MRate = reader["MRate"] as decimal?,
+        //                    DiscPer = reader["DiscPer"] as decimal?,
+        //                    DiscAmt = reader["DiscAmt"] as decimal?,
+        //                    TaxableValueId = reader["TaxableValueId"] as int?,
+        //                    DetailAccountId = reader["DetailAccountId"] as int?,
+        //                    TaxPercent = reader["TaxPercent"] as decimal?,
+        //                    RowTotal = reader["RowTotal"] as decimal?,
+        //                    taxTableRowSubTotal = reader["taxTableRowSubTotal"] as decimal?,
+        //                    gstApplicabeCentralRate = reader["gstApplicabeCentralRate"] as decimal?,
+        //                    gstApplicabeLocalRate = reader["gstApplicabeLocalRate"] as decimal?,
+        //                    tcsApplicabeRate = reader["tcsApplicabeRate"] as decimal?,
+        //                    swachBhartApplicableRate = reader["swachBhartApplicableRate"] as decimal?
+        //                });
+        //            }
+        //        }
+
+        //        // -----------------------------
+        //        // Final Response
+        //        // -----------------------------
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            header,
+        //            details
+        //        });
+        //    }
+        //    catch (SqlException ex)
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            success = false,
+        //            message = ex.Message
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new
+        //        {
+        //            success = false,
+        //            message = "Failed to fetch invoice",
+        //            error = ex.Message
+        //        });
+        //    }
+        //}
+
+
+
+
+        
+[HttpGet("get-sale-invoice-For-Pdf-id/{id}")]
+public async Task<IActionResult> GetSaleInvoiceForPdfById(int id)
         {
             try
             {
@@ -4485,61 +4863,291 @@ namespace softDataApi.Controllers
                 await conn.OpenAsync();
 
                 using var cmd = conn.CreateCommand();
+
                 cmd.CommandText = "dbo.GetSaleInvoiceByIdForPDF";
                 cmd.CommandType = CommandType.StoredProcedure;
 
                 var param = cmd.CreateParameter();
                 param.ParameterName = "@SaleInvoiceId";
                 param.Value = id;
+
                 cmd.Parameters.Add(param);
 
                 using var reader = await cmd.ExecuteReaderAsync();
 
-                // -----------------------------
-                // 1. Read Header
-                // -----------------------------
+                // =====================================================
+                // 1. READ HEADER
+                // =====================================================
                 if (await reader.ReadAsync())
                 {
-                    header.SaleInvoiceId = Convert.ToInt32(reader["SaleInvoiceId"]);
-                    header.InvoiceHeading = reader["InvoiceHeading"]?.ToString();
-                    header.CompanyId = Convert.ToInt32(reader["CompanyId"]);
-                    header.InvoiceNo = reader["InvoiceNo"]?.ToString();
-                    header.InvoiceDate = reader["InvoiceDate"] as DateTime?;
-                    header.AccountId = Convert.ToInt32(reader["AccountId"]);
-                    header.accountName = reader["accountName"]?.ToString();
-                    header.companyPhone = reader["companyPhone"]?.ToString();
-                    header.companyName = reader["companyName"]?.ToString();
-                    header.cityName = reader["cityName"]?.ToString();
-                    header.stateName = reader["stateName"]?.ToString();
-                    header.ShipToPhone = reader["ShipToPhone"]?.ToString();
-                    header.stateCode = reader["stateCode"]?.ToString();
-                    header.OrderNo = reader["OrderNo"]?.ToString();
-                    header.TransportName = reader["TransportName"]?.ToString();
-                    header.TransportPhone = reader["TransportPhone"]?.ToString();
-                    header.TransportGSTNo = reader["TransportGSTNo"]?.ToString();
-                    header.TransportNameManual = reader["TransportNameManual"]?.ToString();
-                    header.ShippingBillNo = reader["ShippingBillNo"]?.ToString();
-                    header.GRNo = reader["GRNo"]?.ToString();
-                    header.swachBharat = reader["swachBharat"] as decimal?;
-                    header.tcs = reader["tcs"] as decimal?;
-                    header.localGst = reader["localGst"] as decimal?;
-                    header.centralGst = reader["centralGst"] as decimal?;
-                    
+                    // -------------------------------------------------
+                    // BASIC INVOICE
+                    // -------------------------------------------------
+                    header.SaleInvoiceId =
+                        reader["SaleInvoiceId"] == DBNull.Value
+                            ? 0
+                            : Convert.ToInt32(reader["SaleInvoiceId"]);
 
-                    header.SubTotal = reader["SubTotal"] as decimal?;
-                    header.RoundAndTotal = reader["RoundAndTotal"] as decimal?;
-                    header.ShipToName = reader["ShipToName"]?.ToString();
-                    header.Value = reader["Value"] as decimal?;
+                    header.InvoiceHeading =
+                        reader["InvoiceHeading"]?.ToString();
 
-                    header.OtherChargeName = reader["OtherChargeName"]?.ToString();
-                    header.Value1 = reader["Value1"] as decimal?;
+                    header.CompanyId =
+                        reader["CompanyId"] == DBNull.Value
+                            ? 0
+                            : Convert.ToInt32(reader["CompanyId"]);
 
-                    header.OtherCharge1Name = reader["OtherCharge1Name"]?.ToString();
+                    header.InvoiceNo =
+                        reader["InvoiceNo"]?.ToString();
+
+                    header.InvoiceDate =
+                        reader["InvoiceDate"] == DBNull.Value
+                            ? null
+                            : Convert.ToDateTime(reader["InvoiceDate"]);
 
 
+                    // =================================================
+                    // MAIN ACCOUNT / PARTY
+                    // =================================================
+
+                    header.AccountId =
+                        reader["AccountId"] == DBNull.Value
+                            ? 0
+                            : Convert.ToInt32(reader["AccountId"]);
+
+                    // Existing
+                    header.accountName =
+                        reader["accountName"]?.ToString();
+
+                    // New Party Name
+                    header.PartyName =
+                        reader["PartyName"]?.ToString();
+
+                    // Account / Party Address
+                    header.PartyAddress =
+                        reader["PartyAddress"]?.ToString();
+
+                    // Account / Party Phone
+                    header.PartyPhone =
+                        reader["PartyPhone"]?.ToString();
+
+                    // Account / Party ZIP
+                    header.PartyZipCode =
+                        reader["PartyZipCode"]?.ToString();
+
+                    header.PartyGst =
+                      reader["PartyGst"]?.ToString();
+
+                    header.PartyPan =
+                      reader["PartyPan"]?.ToString();
+
+                    header.PartyAdharNo =
+                     reader["PartyAdharNo"]?.ToString();
+
+                    header.PartyContectName =
+                    reader["PartyContectName"]?.ToString();
+
+                    header.PartyContectNo =
+                 reader["PartyContectNo"]?.ToString();
+
+                    header.PartyBankName =
+                reader["PartyBankName"]?.ToString();
+
+                    header.PartyIfscCode =
+              reader["PartyIfscCode"]?.ToString();
+
+                    // Account City ID
+                    header.AccountCityId =
+                        reader["AccountCityId"] == DBNull.Value
+                            ? null
+                            : Convert.ToInt32(reader["AccountCityId"]);
+
+                    // Account City
+                    header.PartyCity =
+                        reader["PartyCity"]?.ToString();
+
+                    // Account State
+                    header.PartyState =
+                        reader["PartyState"]?.ToString();
+
+                    // Account State Code
+                    header.PartyStateCode =
+                        reader["PartyStateCode"]?.ToString();
+
+
+                    // =================================================
+                    // OLD ACCOUNT FIELDS
+                    // Keep these for existing PDF code
+                    // =================================================
+
+                    header.companyPhone =
+                        reader["companyPhone"]?.ToString();
+
+                    header.companyName =
+                        reader["companyName"]?.ToString();
+
+                    header.cityName =
+                        reader["cityName"]?.ToString();
+
+                    header.stateName =
+                        reader["stateName"]?.ToString();
+
+                    header.stateCode =
+                        reader["stateCode"]?.ToString();
+
+
+                    // =================================================
+                    // SHIP TO
+                    // =================================================
+
+                    header.ShipToAccountId =
+                        reader["ShipToAccountId"] == DBNull.Value
+                            ? null
+                            : Convert.ToInt32(reader["ShipToAccountId"]);
+
+                    header.ShipToName =
+                        reader["ShipToName"]?.ToString();
+
+                    header.ShipToPartyName =
+                        reader["ShipToPartyName"]?.ToString();
+
+                    header.ShipToAddress =
+                        reader["ShipToAddress"]?.ToString();
+
+                    header.ShipToPhone =
+                        reader["ShipToPhone"]?.ToString();
+
+                    header.ShipToZipCode =
+                        reader["ShipToZipCode"]?.ToString();
+
+                    header.ShipToGst =
+                        reader["ShipToGst"]?.ToString();
+
+                    header.ShipToPan =
+                        reader["ShipToPan"]?.ToString();
+
+                    header.ShipToAdharNo =
+                        reader["ShipToAdharNo"]?.ToString();
+
+                    header.ShipToContectName =
+                        reader["ShipToContectName"]?.ToString();
+
+                    header.ShipToContectNo =
+                        reader["ShipToContectNo"]?.ToString();
+                    header.ShipToBankName =
+                       reader["ShipToBankName"]?.ToString();
+                    header.ShipToIfscCode =
+                       reader["ShipToIfscCode"]?.ToString();
+
+
+
+
+                    header.ShipToCityId =
+                        reader["ShipToCityId"] == DBNull.Value
+                            ? null
+                            : Convert.ToInt32(reader["ShipToCityId"]);
+
+                    header.ShipToCityName =
+                        reader["ShipToCityName"]?.ToString();
+
+                    header.ShipToStateName =
+                        reader["ShipToStateName"]?.ToString();
+
+                    header.ShipToStateCode =
+                        reader["ShipToStateCode"]?.ToString();
+
+
+                    // =================================================
+                    // ORDER / TRANSPORT
+                    // =================================================
+
+                    header.OrderNo =
+                        reader["OrderNo"]?.ToString();
+
+                    header.TransportName =
+                        reader["TransportName"]?.ToString();
+
+                    header.TransportPhone =
+                        reader["TransportPhone"]?.ToString();
+
+                    header.TransportGSTNo =
+                        reader["TransportGSTNo"]?.ToString();
+
+                    header.TransportNameManual =
+                        reader["TransportNameManual"]?.ToString();
+
+
+                    // =================================================
+                    // SHIPPING / OTHER FIELDS
+                    // =================================================
+
+                    header.ShippingBillNo =
+                        reader["ShippingBillNo"]?.ToString();
+
+                    header.GRNo =
+                        reader["GRNo"]?.ToString();
+
+
+                    // =================================================
+                    // TAX / AMOUNT
+                    // =================================================
+
+                    header.swachBharat =
+                        reader["SwachBharat"] == DBNull.Value
+                            ? null
+                            : Convert.ToDecimal(reader["SwachBharat"]);
+
+                    header.tcs =
+                        reader["Tcs"] == DBNull.Value
+                            ? null
+                            : Convert.ToDecimal(reader["Tcs"]);
+
+                    header.localGst =
+                        reader["LocalGst"] == DBNull.Value
+                            ? null
+                            : Convert.ToDecimal(reader["LocalGst"]);
+
+                    header.centralGst =
+                        reader["CentralGst"] == DBNull.Value
+                            ? null
+                            : Convert.ToDecimal(reader["CentralGst"]);
+
+                    header.SubTotal =
+                        reader["SubTotal"] == DBNull.Value
+                            ? null
+                            : Convert.ToDecimal(reader["SubTotal"]);
+
+                    header.RoundAndTotal =
+                        reader["RoundAndTotal"] == DBNull.Value
+                            ? null
+                            : Convert.ToDecimal(reader["RoundAndTotal"]);
+
+
+                    // =================================================
+                    // OTHER CHARGES
+                    // =================================================
+
+                    header.OtherChargeName =
+                        reader["OtherChargeName"]?.ToString();
+
+                    header.Value =
+                        reader["Value"] == DBNull.Value
+                            ? null
+                            : Convert.ToDecimal(reader["Value"]);
+
+                    header.OtherCharge1Name =
+                        reader["OtherCharge1Name"]?.ToString();
+
+                    header.Value1 =
+                        reader["Value1"] == DBNull.Value
+                            ? null
+                            : Convert.ToDecimal(reader["Value1"]);
                 }
 
-                // If invoice not found
+
+                // =====================================================
+                // INVOICE NOT FOUND
+                // =====================================================
+
                 if (header.SaleInvoiceId == 0)
                 {
                     return NotFound(new
@@ -4549,47 +5157,140 @@ namespace softDataApi.Controllers
                     });
                 }
 
-                // -----------------------------
-                // 2. Read Details
-                // -----------------------------
+
+                // =====================================================
+                // 2. READ DETAILS
+                // =====================================================
+
                 if (await reader.NextResultAsync())
                 {
                     while (await reader.ReadAsync())
                     {
                         details.Add(new SaleInvoiceDetailDtoPdf
                         {
-                            SaleInvoiceDetailId = Convert.ToInt32(reader["SaleInvoiceDetailId"]),
-                            Barcode = reader["Barcode"]?.ToString(),
-                            ItemId = Convert.ToInt32(reader["ItemId"]),
-                            ItemName = reader["ItemName"]?.ToString(),
-                            Remarks = reader["Remarks"]?.ToString(),
-                            HSN = reader["HSN"]?.ToString(),
-                            ArtNo = reader["ArtNo"]?.ToString(),
-                            Size = reader["Size"]?.ToString(),
-                            Color = reader["Color"]?.ToString(),
-                            Pack1 = reader["Pack1"]?.ToString(),
-                            Pack2 = reader["Pack2"]?.ToString(),
-                            Qty = reader["Qty"] as decimal?,
-                            Rate = reader["Rate"] as decimal?,
-                            MRate = reader["MRate"] as decimal?,
-                            DiscPer = reader["DiscPer"] as decimal?,
-                            DiscAmt = reader["DiscAmt"] as decimal?,
-                            TaxableValueId = reader["TaxableValueId"] as int?,
-                            DetailAccountId = reader["DetailAccountId"] as int?,
-                            TaxPercent = reader["TaxPercent"] as decimal?,
-                            RowTotal = reader["RowTotal"] as decimal?,
-                            taxTableRowSubTotal = reader["taxTableRowSubTotal"] as decimal?,
-                            gstApplicabeCentralRate = reader["gstApplicabeCentralRate"] as decimal?,
-                            gstApplicabeLocalRate = reader["gstApplicabeLocalRate"] as decimal?,
-                            tcsApplicabeRate = reader["tcsApplicabeRate"] as decimal?,
-                            swachBhartApplicableRate = reader["swachBhartApplicableRate"] as decimal?
+                            SaleInvoiceDetailId =
+                                Convert.ToInt32(reader["SaleInvoiceDetailId"]),
+
+                            Barcode =
+                                reader["Barcode"]?.ToString(),
+
+                            ItemId =
+                                reader["ItemId"] == DBNull.Value
+                                    ? 0
+                                    : Convert.ToInt32(reader["ItemId"]),
+
+                            ItemName =
+                                reader["ItemName"]?.ToString(),
+
+                            Remarks =
+                                reader["Remarks"]?.ToString(),
+
+                            HSN =
+                                reader["HSN"]?.ToString(),
+
+                            ArtNo =
+                                reader["ArtNo"]?.ToString(),
+
+                            Size =
+                                reader["Size"]?.ToString(),
+
+                            Color =
+                                reader["Color"]?.ToString(),
+
+                            Pack1 =
+                                reader["Pack1"]?.ToString(),
+
+                            Pack2 =
+                                reader["Pack2"]?.ToString(),
+
+                            Qty =
+                                reader["Qty"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToDecimal(reader["Qty"]),
+
+                            Rate =
+                                reader["Rate"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToDecimal(reader["Rate"]),
+
+                            MRate =
+                                reader["MRate"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToDecimal(reader["MRate"]),
+
+                            DiscPer =
+                                reader["DiscPer"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToDecimal(reader["DiscPer"]),
+
+                            DiscAmt =
+                                reader["DiscAmt"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToDecimal(reader["DiscAmt"]),
+
+                            TaxableValueId =
+                                reader["TaxableValueId"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToInt32(reader["TaxableValueId"]),
+
+                            DetailAccountId =
+                                reader["DetailAccountId"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToInt32(reader["DetailAccountId"]),
+
+                            TaxPercent =
+                                reader["TaxPercent"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToDecimal(reader["TaxPercent"]),
+
+                            RowTotal =
+                                reader["RowTotal"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToDecimal(reader["RowTotal"]),
+
+                            taxTableRowSubTotal =
+                                reader["taxTableRowSubTotal"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToDecimal(
+                                        reader["taxTableRowSubTotal"]
+                                    ),
+
+                            gstApplicabeCentralRate =
+                                reader["gstApplicabeCentralRate"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToDecimal(
+                                        reader["gstApplicabeCentralRate"]
+                                    ),
+
+                            gstApplicabeLocalRate =
+                                reader["gstApplicabeLocalRate"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToDecimal(
+                                        reader["gstApplicabeLocalRate"]
+                                    ),
+
+                            tcsApplicabeRate =
+                                reader["tcsApplicabeRate"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToDecimal(
+                                        reader["tcsApplicabeRate"]
+                                    ),
+
+                            swachBhartApplicableRate =
+                                reader["swachBhartApplicableRate"] == DBNull.Value
+                                    ? null
+                                    : Convert.ToDecimal(
+                                        reader["swachBhartApplicableRate"]
+                                    )
                         });
                     }
                 }
 
-                // -----------------------------
-                // Final Response
-                // -----------------------------
+
+                // =====================================================
+                // FINAL RESPONSE
+                // =====================================================
+
                 return Ok(new
                 {
                     success = true,
@@ -4615,6 +5316,7 @@ namespace softDataApi.Controllers
                 });
             }
         }
+
 
 
         [HttpPost("add-edit-sale-add-permission")]

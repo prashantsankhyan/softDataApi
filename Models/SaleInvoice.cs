@@ -337,7 +337,46 @@ public class SaleInvoiceHeaderPdf
     public decimal? tcs { get; set; }
     public decimal? localGst { get; set; }
     public decimal? centralGst { get; set; }
+    public int? ShipToAccountId { get; set; }
 
+    public string? PartyName { get; set; }
+    public string? PartyAddress { get; set; }
+    public string? PartyPhone { get; set; }
+    public string? PartyZipCode { get; set; }
+    public string? PartyEmail { get; set; }
+ 
+    public string? PartyGst { get; set; }
+    public string? PartyPan { get; set; }
+    public string? PartyAdharNo { get; set; }
+    public string? PartyContectName { get; set; }
+    public string? PartyContectNo { get; set; }
+    public string? PartyBankName { get; set; }
+
+    public string?  PartyIfscCode { get; set; }
+
+
+    public int? AccountCityId { get; set; }
+    public string? PartyCity { get; set; }
+    public string? PartyState { get; set; }
+    public string? PartyStateCode { get; set; }
+
+    public string? ShipToPartyName { get; set; }
+    public string? ShipToAddress { get; set; }
+    public string? ShipToZipCode { get; set; }
+
+    public string? ShipToGst { get; set; }
+    public string? ShipToPan { get; set; }
+    public string? ShipToAdharNo { get; set; }
+    public string? ShipToContectName { get; set; }
+
+    public string? ShipToContectNo { get; set; }
+    public string? ShipToBankName { get; set; }
+    public string? ShipToIfscCode { get; set; }
+   
+    public int? ShipToCityId { get; set; }
+    public string? ShipToCityName { get; set; }
+    public string? ShipToStateName { get; set; }
+    public string? ShipToStateCode { get; set; }
 
 
 
