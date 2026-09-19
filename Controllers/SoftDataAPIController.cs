@@ -4256,6 +4256,23 @@ public IActionResult GetGstVatAccountByCompanyId(int companyId)
              new SqlParameter("@ShipTo", model.ShipTo),
             new SqlParameter("@Transport", model.Transport ?? (object)DBNull.Value),
             new SqlParameter("@TransportNameManual", model.TransportNameManual ?? (object)DBNull.Value),
+             new SqlParameter("@BillNo",
+                model.BillNo ?? (object)DBNull.Value),
+
+            new SqlParameter("@BillDate",
+                model.BillDate ?? (object)DBNull.Value),
+
+            new SqlParameter("@BillAmount",
+                model.BillAmount ?? (object)DBNull.Value),
+
+            new SqlParameter("@BillTaxAmount",
+                model.BillTaxAmount ?? (object)DBNull.Value),
+
+            new SqlParameter("@BillFreight",
+                model.BillFreight ?? (object)DBNull.Value),
+
+            new SqlParameter("@Advance",
+                model.Advance ?? (object)DBNull.Value),
             new SqlParameter("@ShippingBillNo", model.ShippingBillNo ?? (object)DBNull.Value),
             new SqlParameter("@GRNo", model.GRNo ?? (object)DBNull.Value),
             new SqlParameter("@OrderNo", model.OrderNo ?? (object)DBNull.Value),
@@ -4307,7 +4324,12 @@ public IActionResult GetGstVatAccountByCompanyId(int companyId)
                     .FromSqlRaw(
                         @"EXEC dbo.sp_AddOrUpdate_SaleInvoice
                   @SaleInvoiceId,@InvoiceHeading,@InvoiceHeadingInt,@CompanyId,@InvoiceNo,
-                  @InvoiceDate,@ClaimDate,@AccountId,@ShipTo,@Transport,@TransportNameManual,@ShippingBillNo,@GRNo,
+                  @InvoiceDate,@ClaimDate,@AccountId,@ShipTo,@Transport,@TransportNameManual, @BillNo,
+                    @BillDate,
+                    @BillAmount,
+                    @BillTaxAmount,
+                    @BillFreight,
+                    @Advance,@ShippingBillNo,@GRNo,
                   @OrderNo,@Vehicle,@FormNo,@Weight,@CreditDays,@PackingNo,@DocuThru,
                   @Station,@RGPNo,@Dated,@Freight,@Packages,@PvtMark,@DueDate,
                   @EcomGSTIN,@EwayNo,@ShBNo,@ShipDate,@ShipPartNo,@PortLoading,
@@ -4325,8 +4347,6 @@ public IActionResult GetGstVatAccountByCompanyId(int companyId)
             }
         }
 
-
-
         [HttpGet("sale-invoices/{companyId}")]
         public async Task<IActionResult> GetSaleInvoicesByCompanyId(int companyId)
         {
@@ -4338,6 +4358,7 @@ public IActionResult GetGstVatAccountByCompanyId(int companyId)
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "GetSaleInvoicesByCompanyId";
             cmd.CommandType = CommandType.StoredProcedure;
+
             cmd.Parameters.Add(new SqlParameter("@CompanyId", companyId));
 
             using var reader = await cmd.ExecuteReaderAsync();
@@ -4364,6 +4385,37 @@ public IActionResult GetGstVatAccountByCompanyId(int companyId)
                         TransportNameManual = reader.Get<string>("TransportNameManual"),
                         PvtMark = reader.Get<string>("PvtMark"),
                         DueDate = reader.Get<string>("DueDate"),
+
+                        // =====================================================
+                        // NEW BILL FIELDS
+                        // =====================================================
+                        BillNo = reader["BillNo"] != DBNull.Value
+                            ? reader["BillNo"].ToString()
+                            : "",
+
+                        BillDate = reader["BillDate"] != DBNull.Value
+                            ? Convert.ToDateTime(reader["BillDate"])
+                            : (DateTime?)null,
+
+                        BillAmount = reader["BillAmount"] != DBNull.Value
+                            ? Convert.ToDecimal(reader["BillAmount"])
+                            : 0,
+
+                        BillTaxAmount = reader["BillTaxAmount"] != DBNull.Value
+                            ? Convert.ToDecimal(reader["BillTaxAmount"])
+                            : 0,
+
+                        BillFreight = reader["BillFreight"] != DBNull.Value
+                            ? reader["BillFreight"].ToString()
+                            : "",
+
+                        Advance = reader["Advance"] != DBNull.Value
+                            ? Convert.ToDecimal(reader["Advance"])
+                            : 0,
+
+                        // =====================================================
+                        // TOTALS
+                        // =====================================================
                         SubTotal = reader.Get<decimal>("SubTotal"),
                         RoundAndTotal = reader.Get<decimal>("RoundAndTotal"),
                         TaxableSale = reader.Get<decimal>("TaxableSale"),
@@ -4372,50 +4424,172 @@ public IActionResult GetGstVatAccountByCompanyId(int companyId)
                         Tcs = reader.Get<decimal>("Tcs"),
                         SwachBharat = reader.Get<decimal>("SwachBharat"),
                         ExtraAmount = reader.Get<decimal>("ExtraAmount"),
+
+                        // =====================================================
+                        // SALE HEADING
+                        // =====================================================
                         TypeOfSale = reader.Get<string>("TypeOfSale"),
                         Prefix = reader.Get<string>("Prefix"),
                         Suffix = reader.Get<string>("Suffix"),
                         TaxOnSaleType = reader.Get<string>("TaxOnSaleType"),
-                       
                         NumberStartFrom = reader.Get<int>("NumberStartFrom")
                     };
                 }
 
+                // =====================================================
+                // SALE INVOICE DETAIL
+                // =====================================================
                 if (reader["SaleInvoiceDetailId"] != DBNull.Value)
                 {
                     invoices[invoiceId].Details.Add(new SaleInvoiceDetailDto
                     {
-                        SaleInvoiceDetailId = reader.Get<int>("SaleInvoiceDetailId"),
-                        Barcode = reader.Get<string>("Barcode"),
-                        ItemId = reader.Get<int>("ItemId"),
-                        ItemName = reader.Get<string>("ItemName"),
-                        Qty = reader.Get<decimal>("Qty"),
-                        Rate = reader.Get<decimal>("Rate"),
-                        RowTotal = reader.Get<decimal>("RowTotal"),
+                        SaleInvoiceDetailId =
+                            reader.Get<int>("SaleInvoiceDetailId"),
 
-                        TaxTableRowSubTotal = reader.Get<decimal>("taxTableRowSubTotal"),
-                        TaxableValueId = reader["TaxableValueId"] != DBNull.Value
-            ? Convert.ToInt32(reader["TaxableValueId"])
-            : 0,
+                        Barcode =
+                            reader.Get<string>("Barcode"),
 
-                        Unit = reader["Unit"] != DBNull.Value
-            ? Convert.ToInt32(reader["Unit"])
-            : 0,
+                        ItemId =
+                            reader.Get<int>("ItemId"),
 
-            UnitName = reader["UnitName"] != DBNull.Value
-        ? reader["UnitName"].ToString()
-        : "",
+                        ItemName =
+                            reader.Get<string>("ItemName"),
 
-                        SalePurcAccountName = reader["SalePurcAccountName"] != DBNull.Value
-        ? reader["SalePurcAccountName"].ToString()
-        : ""
+                        Qty =
+                            reader.Get<decimal>("Qty"),
 
+                        Rate =
+                            reader.Get<decimal>("Rate"),
+
+                        RowTotal =
+                            reader.Get<decimal>("RowTotal"),
+
+                        TaxTableRowSubTotal =
+                            reader.Get<decimal>("taxTableRowSubTotal"),
+
+                        TaxableValueId =
+                            reader["TaxableValueId"] != DBNull.Value
+                                ? Convert.ToInt32(reader["TaxableValueId"])
+                                : 0,
+
+                        Unit =
+                            reader["Unit"] != DBNull.Value
+                                ? Convert.ToInt32(reader["Unit"])
+                                : 0,
+
+                        UnitName =
+                            reader["UnitName"] != DBNull.Value
+                                ? reader["UnitName"].ToString()
+                                : "",
+
+                        SalePurcAccountName =
+                            reader["SalePurcAccountName"] != DBNull.Value
+                                ? reader["SalePurcAccountName"].ToString()
+                                : "",
+
+                        // =====================================================
+                        // NEW FIELD
+                        // =====================================================
+                        IncludedRate =
+                            reader["IncludedRate"] != DBNull.Value
+                                ? Convert.ToDecimal(reader["IncludedRate"])
+                                : 0
                     });
                 }
             }
 
             return Ok(invoices.Values);
         }
+
+        //[HttpGet("sale-invoices/{companyId}")]
+        //public async Task<IActionResult> GetSaleInvoicesByCompanyId(int companyId)
+        //{
+        //    var invoices = new Dictionary<int, SaleInvoiceDto>();
+
+        //    using var conn = context.Database.GetDbConnection();
+        //    await conn.OpenAsync();
+
+        //    using var cmd = conn.CreateCommand();
+        //    cmd.CommandText = "GetSaleInvoicesByCompanyId";
+        //    cmd.CommandType = CommandType.StoredProcedure;
+        //    cmd.Parameters.Add(new SqlParameter("@CompanyId", companyId));
+
+        //    using var reader = await cmd.ExecuteReaderAsync();
+
+        //    while (await reader.ReadAsync())
+        //    {
+        //        int invoiceId = reader.Get<int>("SaleInvoiceId");
+
+        //        if (!invoices.ContainsKey(invoiceId))
+        //        {
+        //            invoices[invoiceId] = new SaleInvoiceDto
+        //            {
+        //                SaleInvoiceId = invoiceId,
+        //                InvoiceHeading = reader.Get<string>("InvoiceHeading"),
+        //                InvoiceHeadingInt = reader.Get<int>("InvoiceHeadingInt"),
+        //                CompanyId = reader.Get<int>("CompanyId"),
+        //                InvoiceNo = reader.Get<string>("InvoiceNo"),
+        //                InvoiceDate = reader.Get<DateTime>("InvoiceDate"),
+        //                ClaimDate = reader.Get<DateTime>("ClaimDate"),
+        //                AccountId = reader.Get<int>("AccountId"),
+        //                AccountName = reader.Get<string>("accountName"),
+        //                ShipTo = reader.Get<int>("ShipTo"),
+        //                ShipToName = reader.Get<string>("ShipToName"),
+        //                TransportNameManual = reader.Get<string>("TransportNameManual"),
+        //                PvtMark = reader.Get<string>("PvtMark"),
+        //                DueDate = reader.Get<string>("DueDate"),
+        //                SubTotal = reader.Get<decimal>("SubTotal"),
+        //                RoundAndTotal = reader.Get<decimal>("RoundAndTotal"),
+        //                TaxableSale = reader.Get<decimal>("TaxableSale"),
+        //                CentralGst = reader.Get<decimal>("CentralGst"),
+        //                LocalGst = reader.Get<decimal>("LocalGst"),
+        //                Tcs = reader.Get<decimal>("Tcs"),
+        //                SwachBharat = reader.Get<decimal>("SwachBharat"),
+        //                ExtraAmount = reader.Get<decimal>("ExtraAmount"),
+        //                TypeOfSale = reader.Get<string>("TypeOfSale"),
+        //                Prefix = reader.Get<string>("Prefix"),
+        //                Suffix = reader.Get<string>("Suffix"),
+        //                TaxOnSaleType = reader.Get<string>("TaxOnSaleType"),
+
+        //                NumberStartFrom = reader.Get<int>("NumberStartFrom")
+        //            };
+        //        }
+
+        //        if (reader["SaleInvoiceDetailId"] != DBNull.Value)
+        //        {
+        //            invoices[invoiceId].Details.Add(new SaleInvoiceDetailDto
+        //            {
+        //                SaleInvoiceDetailId = reader.Get<int>("SaleInvoiceDetailId"),
+        //                Barcode = reader.Get<string>("Barcode"),
+        //                ItemId = reader.Get<int>("ItemId"),
+        //                ItemName = reader.Get<string>("ItemName"),
+        //                Qty = reader.Get<decimal>("Qty"),
+        //                Rate = reader.Get<decimal>("Rate"),
+        //                RowTotal = reader.Get<decimal>("RowTotal"),
+
+        //                TaxTableRowSubTotal = reader.Get<decimal>("taxTableRowSubTotal"),
+        //                TaxableValueId = reader["TaxableValueId"] != DBNull.Value
+        //    ? Convert.ToInt32(reader["TaxableValueId"])
+        //    : 0,
+
+        //                Unit = reader["Unit"] != DBNull.Value
+        //    ? Convert.ToInt32(reader["Unit"])
+        //    : 0,
+
+        //    UnitName = reader["UnitName"] != DBNull.Value
+        //? reader["UnitName"].ToString()
+        //: "",
+
+        //                SalePurcAccountName = reader["SalePurcAccountName"] != DBNull.Value
+        //? reader["SalePurcAccountName"].ToString()
+        //: ""
+
+        //            });
+        //        }
+        //    }
+
+        //    return Ok(invoices.Values);
+        //}
 
 
 

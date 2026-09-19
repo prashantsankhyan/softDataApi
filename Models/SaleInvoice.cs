@@ -128,6 +128,17 @@ public partial class SaleInvoiceRequest
     public int? Transport { get; set; }
 
     public string? TransportNameManual { get; set; }
+    public string? BillNo { get; set; }
+
+    public DateTime? BillDate { get; set; }
+
+    public decimal? BillAmount { get; set; }
+
+    public decimal? BillTaxAmount { get; set; }
+
+    public string? BillFreight { get; set; }
+
+    public decimal? Advance { get; set; }
     public string? ShippingBillNo { get; set; }
     public string? GRNo { get; set; }
     public string? OrderNo { get; set; }
@@ -196,6 +207,8 @@ public class SaleInvoiceDetailRequest
     public decimal taxTableRowSubTotal { get; set; }
 
     public int? Unit { get; set; }
+
+    public decimal? IncludedRate { get; set; }
 }
 
 public class ApiResponse
@@ -227,6 +240,18 @@ public class SaleInvoiceDto
     public string? TransportNameManual { get; set; }
     public string? ShippingBillNo { get; set; }
     public string? GRNo { get; set; }
+
+    public string? BillNo { get; set; }
+
+    public DateTime? BillDate { get; set; }
+
+    public decimal? BillAmount { get; set; }
+
+    public decimal? BillTaxAmount { get; set; }
+
+    public string? BillFreight { get; set; }
+
+    public decimal? Advance { get; set; }
     public string? OrderNo { get; set; }
     public string? Vehicle { get; set; }
     public string? FormNo { get; set; }
@@ -300,6 +325,8 @@ public class SaleInvoiceDetailDto
     public decimal TaxTableRowSubTotal { get; set; }
 
     public int? Unit { get; set; }
+
+    public decimal? IncludedRate { get; set; }
     public string? UnitName { get; set; }
     public string? SalePurcAccountName { get; set; }
 }
