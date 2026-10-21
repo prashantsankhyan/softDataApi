@@ -20,7 +20,9 @@
     
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="Twilio" Version="8.0.2" />
   </ItemGroup>
+  
   
 
 </Project>

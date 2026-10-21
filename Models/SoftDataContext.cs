@@ -94,6 +94,10 @@ public partial class SoftDataContext : DbContext
     public DbSet<ApiResponse> ApiResponses { get; set; }
 
     public DbSet<PurchaseInvoiceApiResponse> PurchaseInvoiceApiResponses { get; set; }
+    public DbSet<CraditNoteForPurchaseApiResponse>CraditNoteForPurchaseApiResponses{ get; set; } = null!;
+
+    public DbSet<CraditNoteForPurchaseByCompanyIdDto>CraditNoteForPurchaseByCompanyIdDtos{ get; set; } = null!;
+
     public virtual DbSet<TbItemMaster> TbItemMasters { get; set; }
 
     public virtual DbSet<TbStateMaster> TbStateMasters { get; set; }
@@ -729,8 +733,13 @@ public partial class SoftDataContext : DbContext
         modelBuilder.Entity<ApiResponse>().HasNoKey();
 
         modelBuilder.Entity<PurchaseInvoiceApiResponse>().HasNoKey();
+        modelBuilder.Entity<CraditNoteForPurchaseApiResponse>()
+    .HasNoKey();
+        modelBuilder.Entity<CraditNoteForPurchaseByCompanyIdDto>()
+    .HasNoKey();
+        modelBuilder.Entity<CraditNoteForPurchaseByCompanyIdDto>()
+    .HasNoKey();
 
-        
         modelBuilder.Entity<PaymentReceiptResponse>().HasNoKey();
         modelBuilder.Entity<TbStateMaster>(entity =>
         {

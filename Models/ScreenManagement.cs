@@ -25,6 +25,8 @@ public partial class ScreenManagement
     public string? TermAndConditionSale { get; set; }
     public string? WhatWeDoInSale { get; set; }
     public string? DescriptionSale { get; set; }
+    public bool BillDetailsSale { get; set; }
+
 
     // Purchase
     public bool? RemarksPurchase { get; set; }
@@ -44,9 +46,11 @@ public partial class ScreenManagement
     public string? WhatWeDoInPurchase { get; set; }
     public string? DescriptionPurchase { get; set; }
 
-    public bool SaleOfNegativeStock { get; set; }
-    public bool ShowMoreDetailsSale { get; set; }
-    public bool ShowMoreDetailsPurchase { get; set; }
+    public bool? SaleOfNegativeStock { get; set; }
+    public bool? ShowMoreDetailsSale { get; set; }
+    public bool? ShowMoreDetailsPurchase { get; set; }
+
+    public bool BillDetailsPurchase { get; set; }
 }
 public class CommonSpResponseWithId
 {

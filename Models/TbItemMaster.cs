@@ -247,4 +247,6 @@ public class ItemWiseStockDto
 
     public decimal PurchaseValue { get; set; }
     public decimal SaleValue { get; set; }
+
 }
+

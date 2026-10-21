@@ -53,6 +53,15 @@ public partial class PurchaseInvoice
 
     public string? Freight { get; set; }
 
+
+    public string? BillNo { get; set; }
+    public string? BillDate { get; set; }
+    public decimal? BillAmount { get; set; }
+
+    public decimal? TaxAmount { get; set; }
+    public decimal? FreightAmount { get; set; }
+    public decimal? Advance { get; set; }
+
     public string? Packages { get; set; }
 
     public string? PvtMark { get; set; }
@@ -160,6 +169,14 @@ public partial class PurchaseInvoiceRequest
     public string? Dated { get; set; }
 
     public string? Freight { get; set; }
+
+    public string? BillNo { get; set; }
+    public string? BillDate { get; set; }
+    public decimal? BillAmount { get; set; }
+    public decimal? TaxAmount { get; set; }
+
+    public decimal? FreightAmount { get; set; }
+    public decimal? Advance { get; set; }
 
     public string? Packages { get; set; }
 
@@ -334,6 +351,16 @@ public class PurchaseInvoiceDto
     public string? Dated { get; set; }
 
     public string? Freight { get; set; }
+
+    public string? BillNo { get; set; }
+    public string? BillDate { get; set; }
+    public decimal? BillAmount { get; set; }
+
+    public decimal? TaxAmount { get; set; }
+    public decimal? FreightAmount { get; set; }
+    public decimal? Advance { get; set; }
+
+
 
     public string? Packages { get; set; }
 
@@ -524,6 +551,14 @@ public class PurchaseInvoiceHeaderPdf
     public decimal? Value1 { get; set; }
 
     public string? OtherCharge1Name { get; set; }
+
+    public string? BillNo { get; set; }
+    public string? BillDate { get; set; }
+    public decimal? BillAmount { get; set; }
+
+    public decimal? TaxAmount { get; set; }
+    public decimal? FreightAmount { get; set; }
+    public decimal? Advance { get; set; }
 }
 
 

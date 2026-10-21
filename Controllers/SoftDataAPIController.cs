@@ -7,7 +7,9 @@ using Newtonsoft.Json;
 using softDataApi.Models;
 using System.Data;
 using System.Data.Common;
-
+using Twilio;
+using Twilio.Rest.Api.V2010.Account;
+using Twilio.Types;
 public static class DataReaderExt
 {
     public static T? Get<T>(this DbDataReader r, string column)
@@ -2839,6 +2841,7 @@ public IActionResult GetGstVatAccountByCompanyId(int companyId)
                     -- NEW SALE SETTINGS
                     @SaleOfNegativeStock,
                     @ShowMoreDetailsSale,
+                    @BillDetailsSale,
 
                     @RemarksPurchase,
                     @HSNPurchase,
@@ -2857,7 +2860,8 @@ public IActionResult GetGstVatAccountByCompanyId(int companyId)
                     @DescriptionPurchase,
 
                     -- NEW PURCHASE SETTINGS
-                    @ShowMoreDetailsPurchase",
+                    @ShowMoreDetailsPurchase,
+                     @BillDetailsPurchase",
 
                         new SqlParameter("@ScreenId", model.ScreenId),
                         new SqlParameter("@CompanyId", model.CompanyId),
@@ -2897,6 +2901,10 @@ public IActionResult GetGstVatAccountByCompanyId(int companyId)
                             "@ShowMoreDetailsSale",
                             model.ShowMoreDetailsSale
                         ),
+                           new SqlParameter(
+                    "@BillDetailsSale",
+                    model.BillDetailsSale
+                ),
 
                         new SqlParameter("@RemarksPurchase", model.RemarksPurchase),
                         new SqlParameter("@HSNPurchase", model.HSNPurchase),
@@ -2928,7 +2936,11 @@ public IActionResult GetGstVatAccountByCompanyId(int companyId)
                         new SqlParameter(
                             "@ShowMoreDetailsPurchase",
                             model.ShowMoreDetailsPurchase
-                        )
+                        ),
+                         new SqlParameter(
+                    "@BillDetailsPurchase",
+                    model.BillDetailsPurchase
+                )
                     )
                     .ToListAsync();
 
@@ -4394,8 +4406,9 @@ public IActionResult GetGstVatAccountByCompanyId(int companyId)
                             : "",
 
                         BillDate = reader["BillDate"] != DBNull.Value
-                            ? Convert.ToDateTime(reader["BillDate"])
-                            : (DateTime?)null,
+                            ? reader["BillDate"].ToString()
+                            : "",
+                       
 
                         BillAmount = reader["BillAmount"] != DBNull.Value
                             ? Convert.ToDecimal(reader["BillAmount"])
@@ -5261,6 +5274,19 @@ public async Task<IActionResult> GetSaleInvoiceForPdfById(int id)
                         reader["GRNo"]?.ToString();
 
 
+                    header.Vehicle = reader["Vehicle"]?.ToString();
+
+                    header.FormNo = reader["FormNo"]?.ToString();
+
+                    header.BillNo = reader["BillNo"]?.ToString();
+
+                    header.BillDate = reader["BillDate"]?.ToString(); 
+
+                    header.BillAmount = reader["BillAmount"] == DBNull.Value ? null : Convert.ToDecimal(reader["BillAmount"]);
+                    header.BillTaxAmount = reader["BillTaxAmount"] == DBNull.Value ? null : Convert.ToDecimal(reader["BillTaxAmount"]);
+                    header.BillFreight = reader["BillFreight"]?.ToString();
+                    header.Advance = reader["Advance"] == DBNull.Value ? null : Convert.ToDecimal(reader["Advance"]);
+
                     // =================================================
                     // TAX / AMOUNT
                     // =================================================
@@ -6037,6 +6063,27 @@ public async Task<IActionResult> GetSaleInvoiceForPdfById(int id)
                 model.Freight ?? (object)DBNull.Value),
 
             new SqlParameter(
+                "@BillNo",
+                model.BillNo ?? (object)DBNull.Value),
+            new SqlParameter(
+                "@BillDate",
+                model.BillDate ?? (object)DBNull.Value),
+            new SqlParameter(
+                "@BillAmount",
+                model.BillAmount ?? (object)DBNull.Value),
+            new SqlParameter(
+                "@TaxAmount",
+                model.TaxAmount ?? (object)DBNull.Value),
+            new SqlParameter(
+                "@FreightAmount",
+                model.FreightAmount ?? (object)DBNull.Value),
+             new SqlParameter(
+                "@Advance",
+                model.Advance ?? (object)DBNull.Value),
+
+
+
+            new SqlParameter(
                 "@Packages",
                 model.Packages ?? (object)DBNull.Value),
 
@@ -6169,6 +6216,12 @@ public async Task<IActionResult> GetSaleInvoiceForPdfById(int id)
                     @RGPNo,
                     @Dated,
                     @Freight,
+                    @BillNo,
+                    @BillDate,
+                    @BillAmount,
+                    @TaxAmount,
+                    @FreightAmount,
+@Advance,
                     @Packages,
                     @PvtMark,
                     @DueDate,
@@ -6528,6 +6581,13 @@ public async Task<IActionResult> GetSaleInvoiceForPdfById(int id)
                     header.Value1 = reader["Value1"] as decimal?;
 
                     header.OtherCharge1Name = reader["OtherCharge1Name"]?.ToString();
+                    header.BillNo = reader["BillNo"]?.ToString();
+                    header.BillDate = reader["BillDate"]?.ToString();
+                    header.BillAmount = reader["BillAmount"] as decimal?;
+                    header.TaxAmount = reader["TaxAmount"] as decimal?;
+                    header.FreightAmount = reader["FreightAmount"] as decimal?;
+                    header.Advance = reader["Advance"] as decimal?;
+
 
 
                 }
@@ -6740,6 +6800,1373 @@ public async Task<IActionResult> GetSaleInvoiceForPdfById(int id)
             }
         }
 
+
+[HttpPost("add-edit-DabitNoteSale")]
+public async Task<IActionResult> AddEditDabitNoteSale(
+    [FromBody] DabitNoteSaleRequest model)
+        {
+            try
+            {
+                if (model == null)
+                {
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = "Request body cannot be null."
+                    });
+                }
+
+                // Ensure detail records are always sent as a JSON array.
+                var detailsJson = model.DabitNoteSaleDetails?.Any() == true
+                    ? JsonConvert.SerializeObject(model.DabitNoteSaleDetails)
+                    : "[]";
+
+                object DbValue(object? value) => value ?? DBNull.Value;
+
+                var parameters = new[]
+                {
+            new SqlParameter("@DabitNoteId",
+                SqlDbType.Int)
+            {
+                Value = DbValue(model.DabitNoteId)
+            },
+
+            // IMPORTANT: SaleInvoiceId is the second
+            // parameter in the stored procedure.
+            new SqlParameter("@SaleInvoiceId",
+                SqlDbType.Int)
+            {
+                Value = DbValue(model.SaleInvoiceId)
+            },
+
+            new SqlParameter("@InvoiceHeading",
+                SqlDbType.NVarChar, 200)
+            {
+                Value = DbValue(model.InvoiceHeading)
+            },
+
+            new SqlParameter("@InvoiceHeadingInt",
+                SqlDbType.Int)
+            {
+                Value = DbValue(model.InvoiceHeadingInt)
+            },
+
+            new SqlParameter("@CompanyId",
+                SqlDbType.Int)
+            {
+                Value = model.CompanyId
+            },
+
+            new SqlParameter("@InvoiceNo",
+                SqlDbType.NVarChar, 50)
+            {
+                Value = DbValue(model.InvoiceNo)
+            },
+
+            new SqlParameter("@InvoiceDate",
+                SqlDbType.DateTime2)
+            {
+                Value = DbValue(model.InvoiceDate)
+            },
+
+            new SqlParameter("@ClaimDate",
+                SqlDbType.DateTime2)
+            {
+                Value = DbValue(model.ClaimDate)
+            },
+
+            new SqlParameter("@AccountId",
+                SqlDbType.Int)
+            {
+                Value = model.AccountId
+            },
+
+            new SqlParameter("@ShipTo",
+                SqlDbType.Int)
+            {
+                Value = DbValue(model.ShipTo)
+            },
+
+            new SqlParameter("@Transport",
+                SqlDbType.Int)
+            {
+                Value = DbValue(model.Transport)
+            },
+
+            new SqlParameter("@TransportNameManual",
+                SqlDbType.NVarChar, 500)
+            {
+                Value = DbValue(model.TransportNameManual)
+            },
+
+            new SqlParameter("@BillNo",
+                SqlDbType.NVarChar, 200)
+            {
+                Value = DbValue(model.BillNo)
+            },
+
+            new SqlParameter("@BillDate",
+                SqlDbType.NVarChar, 40)
+            {
+                Value = DbValue(model.BillDate)
+            },
+
+            new SqlParameter("@BillAmount",
+                SqlDbType.Decimal)
+            {
+                Precision = 18,
+                Scale = 2,
+                Value = DbValue(model.BillAmount)
+            },
+
+            new SqlParameter("@BillTaxAmount",
+                SqlDbType.Decimal)
+            {
+                Precision = 18,
+                Scale = 2,
+                Value = DbValue(model.BillTaxAmount)
+            },
+
+            new SqlParameter("@BillFreight",
+                SqlDbType.NVarChar, 1000)
+            {
+                Value = DbValue(model.BillFreight)
+            },
+
+            new SqlParameter("@Advance",
+                SqlDbType.Decimal)
+            {
+                Precision = 18,
+                Scale = 2,
+                Value = DbValue(model.Advance)
+            },
+
+            new SqlParameter("@ShippingBillNo",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.ShippingBillNo)
+            },
+
+            new SqlParameter("@GRNo",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.GRNo)
+            },
+
+            new SqlParameter("@OrderNo",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.OrderNo)
+            },
+
+            new SqlParameter("@Vehicle",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.Vehicle)
+            },
+
+            new SqlParameter("@FormNo",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.FormNo)
+            },
+
+            new SqlParameter("@Weight",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.Weight)
+            },
+
+            new SqlParameter("@CreditDays",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.CreditDays)
+            },
+
+            new SqlParameter("@PackingNo",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.PackingNo)
+            },
+
+            new SqlParameter("@DocuThru",
+                SqlDbType.NVarChar, 200)
+            {
+                Value = DbValue(model.DocuThru)
+            },
+
+            new SqlParameter("@Station",
+                SqlDbType.NVarChar, 200)
+            {
+                Value = DbValue(model.Station)
+            },
+
+            new SqlParameter("@RGPNo",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.RGPNo)
+            },
+
+            new SqlParameter("@Dated",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.Dated)
+            },
+
+            new SqlParameter("@Freight",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.Freight)
+            },
+
+            new SqlParameter("@Packages",
+                SqlDbType.NVarChar, 200)
+            {
+                Value = DbValue(model.Packages)
+            },
+
+            new SqlParameter("@PvtMark",
+                SqlDbType.NVarChar, 200)
+            {
+                Value = DbValue(model.PvtMark)
+            },
+
+            new SqlParameter("@DueDate",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.DueDate)
+            },
+
+            new SqlParameter("@EcomGSTIN",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.EcomGSTIN)
+            },
+
+            new SqlParameter("@EwayNo",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.EwayNo)
+            },
+
+            new SqlParameter("@ShBNo",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.ShBNo)
+            },
+
+            new SqlParameter("@ShipDate",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.ShipDate)
+            },
+
+            new SqlParameter("@ShipPartNo",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.ShipPartNo)
+            },
+
+            new SqlParameter("@PortLoading",
+                SqlDbType.NVarChar, 200)
+            {
+                Value = DbValue(model.PortLoading)
+            },
+
+            new SqlParameter("@PortDischarge",
+                SqlDbType.NVarChar, 200)
+            {
+                Value = DbValue(model.PortDischarge)
+            },
+
+            new SqlParameter("@FinalDestination",
+                SqlDbType.NVarChar, 200)
+            {
+                Value = DbValue(model.FinalDestination)
+            },
+
+            new SqlParameter("@EntrBy",
+                SqlDbType.NVarChar, 100)
+            {
+                Value = DbValue(model.EntrBy)
+            },
+
+            new SqlParameter("@SubTotal",
+                SqlDbType.Decimal)
+            {
+                Precision = 18,
+                Scale = 2,
+                Value = DbValue(model.SubTotal)
+            },
+
+            new SqlParameter("@RoundAndTotal",
+                SqlDbType.Decimal)
+            {
+                Precision = 18,
+                Scale = 2,
+                Value = DbValue(model.RoundAndTotal)
+            },
+
+            new SqlParameter("@TaxableSale",
+                SqlDbType.Decimal)
+            {
+                Precision = 18,
+                Scale = 2,
+                Value = DbValue(model.TaxableSale)
+            },
+
+            new SqlParameter("@CentralGst",
+                SqlDbType.Decimal)
+            {
+                Precision = 18,
+                Scale = 2,
+                Value = DbValue(model.CentralGst)
+            },
+
+            new SqlParameter("@LocalGst",
+                SqlDbType.Decimal)
+            {
+                Precision = 18,
+                Scale = 2,
+                Value = DbValue(model.LocalGst)
+            },
+
+            new SqlParameter("@Tcs",
+                SqlDbType.Decimal)
+            {
+                Precision = 18,
+                Scale = 2,
+                Value = DbValue(model.Tcs)
+            },
+
+            new SqlParameter("@SwachBharat",
+                SqlDbType.Decimal)
+            {
+                Precision = 18,
+                Scale = 2,
+                Value = DbValue(model.SwachBharat)
+            },
+
+            new SqlParameter("@OtherCharge",
+                SqlDbType.Int)
+            {
+                Value = DbValue(model.OtherCharge)
+            },
+
+            new SqlParameter("@Value",
+                SqlDbType.Decimal)
+            {
+                Precision = 18,
+                Scale = 2,
+                Value = DbValue(model.Value)
+            },
+
+            new SqlParameter("@OtherCharge1",
+                SqlDbType.Int)
+            {
+                Value = DbValue(model.OtherCharge1)
+            },
+
+            new SqlParameter("@Value1",
+                SqlDbType.Decimal)
+            {
+                Precision = 18,
+                Scale = 2,
+                Value = DbValue(model.Value1)
+            },
+
+            new SqlParameter("@ExtraAmount",
+                SqlDbType.Decimal)
+            {
+                Precision = 18,
+                Scale = 2,
+                Value = DbValue(model.ExtraAmount)
+            },
+
+            new SqlParameter("@DabitNoteSaleDetails",
+                SqlDbType.NVarChar, -1)
+            {
+                Value = detailsJson
+            }
+        };
+
+                const string sql = @"
+            EXEC dbo.sp_AddOrUpdate_DabitNoteSale
+                @DabitNoteId = @DabitNoteId,
+                @SaleInvoiceId = @SaleInvoiceId,
+                @InvoiceHeading = @InvoiceHeading,
+                @InvoiceHeadingInt = @InvoiceHeadingInt,
+                @CompanyId = @CompanyId,
+                @InvoiceNo = @InvoiceNo,
+                @InvoiceDate = @InvoiceDate,
+                @ClaimDate = @ClaimDate,
+                @AccountId = @AccountId,
+                @ShipTo = @ShipTo,
+                @Transport = @Transport,
+                @TransportNameManual = @TransportNameManual,
+                @BillNo = @BillNo,
+                @BillDate = @BillDate,
+                @BillAmount = @BillAmount,
+                @BillTaxAmount = @BillTaxAmount,
+                @BillFreight = @BillFreight,
+                @Advance = @Advance,
+                @ShippingBillNo = @ShippingBillNo,
+                @GRNo = @GRNo,
+                @OrderNo = @OrderNo,
+                @Vehicle = @Vehicle,
+                @FormNo = @FormNo,
+                @Weight = @Weight,
+                @CreditDays = @CreditDays,
+                @PackingNo = @PackingNo,
+                @DocuThru = @DocuThru,
+                @Station = @Station,
+                @RGPNo = @RGPNo,
+                @Dated = @Dated,
+                @Freight = @Freight,
+                @Packages = @Packages,
+                @PvtMark = @PvtMark,
+                @DueDate = @DueDate,
+                @EcomGSTIN = @EcomGSTIN,
+                @EwayNo = @EwayNo,
+                @ShBNo = @ShBNo,
+                @ShipDate = @ShipDate,
+                @ShipPartNo = @ShipPartNo,
+                @PortLoading = @PortLoading,
+                @PortDischarge = @PortDischarge,
+                @FinalDestination = @FinalDestination,
+                @EntrBy = @EntrBy,
+                @SubTotal = @SubTotal,
+                @RoundAndTotal = @RoundAndTotal,
+                @TaxableSale = @TaxableSale,
+                @CentralGst = @CentralGst,
+                @LocalGst = @LocalGst,
+                @Tcs = @Tcs,
+                @SwachBharat = @SwachBharat,
+                @OtherCharge = @OtherCharge,
+                @Value = @Value,
+                @OtherCharge1 = @OtherCharge1,
+                @Value1 = @Value1,
+                @ExtraAmount = @ExtraAmount,
+                @DabitNoteSaleDetails = @DabitNoteSaleDetails";
+
+                var result = await context
+                    .Set<ApiResponse>()
+                    .FromSqlRaw(sql, parameters)
+                    .ToListAsync();
+
+                return Ok(result.FirstOrDefault());
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = ex.GetBaseException().Message
+                });
+            }
+        }
+
+
+
+
+  
+
+[HttpGet("dabit-notes/{companyId}")]
+public async Task<IActionResult> GetDabitNotesByCompanyId(int companyId)
+        {
+            var debitNotes = new Dictionary<int, DabitNoteSaleDto>();
+
+            try
+            {
+                using var conn = context.Database.GetDbConnection();
+                await conn.OpenAsync();
+
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "dbo.GetDabitNotesByCompanyId";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add(new SqlParameter("@CompanyId", companyId));
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    int debitNoteId = GetInt(reader, "DabitNoteId");
+
+                    if (!debitNotes.ContainsKey(debitNoteId))
+                    {
+                        debitNotes[debitNoteId] = new DabitNoteSaleDto
+                        {
+                            // =====================================
+                            // HEADER
+                            // =====================================
+                            DabitNoteId = debitNoteId,
+                            SaleInvoiceId = GetInt(reader, "SaleInvoiceId"),
+                            InvoiceHeading = GetString(reader, "InvoiceHeading"),
+                            InvoiceHeadingInt = GetInt(reader, "InvoiceHeadingInt"),
+                            CompanyId = GetInt(reader, "CompanyId"),
+                            InvoiceNo = GetString(reader, "InvoiceNo"),
+                            InvoiceDate = GetDateTime(reader, "InvoiceDate") ?? DateTime.MinValue,
+                            ClaimDate = GetDateTime(reader, "ClaimDate"),
+
+                            AccountId = GetInt(reader, "AccountId"),
+                            AccountName = GetString(reader, "AccountName"),
+                            ShipTo = GetInt(reader, "ShipTo"),
+                            ShipToName = GetString(reader, "ShipToName"),
+
+                            Transport = GetInt(reader, "Transport"),
+                            TransportNameManual = GetString(reader, "TransportNameManual"),
+
+                            // =====================================
+                            // BILL FIELDS
+                            // =====================================
+                            BillNo = GetString(reader, "BillNo"),
+                            BillDate = GetString(reader, "BillDate"),
+                            BillAmount = GetDecimal(reader, "BillAmount"),
+                            BillTaxAmount = GetDecimal(reader, "BillTaxAmount"),
+                            BillFreight = GetString(reader, "BillFreight"),
+                            Advance = GetDecimal(reader, "Advance"),
+
+                            // =====================================
+                            // OTHER INVOICE FIELDS
+                            // =====================================
+                            ShippingBillNo = GetString(reader, "ShippingBillNo"),
+                            GRNo = GetString(reader, "GRNo"),
+                            OrderNo = GetString(reader, "OrderNo"),
+                            Vehicle = GetString(reader, "Vehicle"),
+                            FormNo = GetString(reader, "FormNo"),
+                            Weight = GetString(reader, "Weight"),
+                            CreditDays = GetInt(reader, "CreditDays"),
+                            PackingNo = GetString(reader, "PackingNo"),
+                            DocuThru = GetString(reader, "DocuThru"),
+                            Station = GetString(reader, "Station"),
+                            RGPNo = GetString(reader, "RGPNo"),
+                            Dated = GetString(reader, "Dated"),
+                            Freight = GetString(reader, "Freight"),
+                            Packages = GetString(reader, "Packages"),
+                            PvtMark = GetString(reader, "PvtMark"),
+                            DueDate = GetString(reader, "DueDate"),
+                            EcomGSTIN = GetString(reader, "EcomGSTIN"),
+                            EwayNo = GetString(reader, "EwayNo"),
+                            ShBNo = GetString(reader, "ShBNo"),
+                            ShipDate = GetString(reader, "ShipDate"),
+                            ShipPartNo = GetString(reader, "ShipPartNo"),
+                            PortLoading = GetString(reader, "PortLoading"),
+                            PortDischarge = GetString(reader, "PortDischarge"),
+                            FinalDestination = GetString(reader, "FinalDestination"),
+                            EntrBy = GetString(reader, "EntrBy"),
+                            EntryDate = GetDateTime(reader, "EntryDate"),
+
+                            // =====================================
+                            // TOTALS
+                            // =====================================
+                            SubTotal = GetDecimal(reader, "SubTotal"),
+                            RoundAndTotal = GetDecimal(reader, "RoundAndTotal"),
+                            TaxableSale = GetDecimal(reader, "TaxableSale"),
+                            CentralGst = GetDecimal(reader, "CentralGst"),
+                            LocalGst = GetDecimal(reader, "LocalGst"),
+                            Tcs = GetDecimal(reader, "Tcs"),
+                            SwachBharat = GetDecimal(reader, "SwachBharat"),
+                            OtherCharge = GetDecimal(reader, "OtherCharge"),
+                            Value = GetDecimal(reader, "Value"),
+                            OtherCharge1 = GetDecimal(reader, "OtherCharge1"),
+                            Value1 = GetDecimal(reader, "Value1"),
+                            ExtraAmount = GetDecimal(reader, "ExtraAmount"),
+
+                            // =====================================
+                            // SALE HEADING
+                            // =====================================
+                            TypeOfSale = GetString(reader, "TypeOfSale"),
+                            Prefix = GetString(reader, "Prefix"),
+                            Suffix = GetString(reader, "Suffix"),
+                            TaxOnSaleType = GetString(reader, "TaxOnSaleType"),
+
+                            // SQL returns VARCHAR(500).
+                            // Parses numeric text safely if DTO is int.
+                            NumberStartFrom = GetString(reader, "NumberStartFrom")
+                        };
+                    }
+
+                    // =============================================
+                    // DEBIT NOTE DETAILS
+                    // =============================================
+                    if (reader["DabitNoteSaleDetailId"] != DBNull.Value)
+                    {
+                        debitNotes[debitNoteId].Details.Add(
+                            new DabitNoteSaleDetailDto
+                            {
+                                DabitNoteSaleDetailId =
+                                    GetInt(reader, "DabitNoteSaleDetailId"),
+
+                                DabitNoteId = debitNoteId,
+                                SaleInvoiceDetailId =
+                                    GetInt(reader, "SaleInvoiceDetailId"),
+
+                                SaleInvoiceId =
+                                    GetInt(reader, "DetailSaleInvoiceId"),
+
+                                Barcode = GetString(reader, "Barcode"),
+                                ItemId = GetInt(reader, "ItemId"),
+                                ItemName = GetString(reader, "ItemName"),
+                                Remarks = GetString(reader, "Remarks"),
+                                HSN = GetString(reader, "HSN"),
+                                ArtNo = GetString(reader, "ArtNo"),
+                                Size = GetString(reader, "Size"),
+                                Color = GetString(reader, "Color"),
+                                Pack1 = GetString(reader, "Pack1"),
+                                Pack2 = GetString(reader, "Pack2"),
+
+                                Qty = GetDecimal(reader, "Qty"),
+                                Rate = GetDecimal(reader, "Rate"),
+                                MRate = GetDecimal(reader, "MRate"),
+                                DiscPer = GetDecimal(reader, "DiscPer"),
+                                DiscAmt = GetDecimal(reader, "DiscAmt"),
+
+                                TaxableValueId =
+                                    GetInt(reader, "TaxableValueId"),
+
+                                SalePurcAccountName =
+                                    GetString(reader, "SalePurcAccountName"),
+
+                                AccountId = GetInt(reader, "DetailAccountId"),
+                                TaxPercent = GetDecimal(reader, "TaxPercent"),
+                                RowTotal = GetDecimal(reader, "RowTotal"),
+
+                                TaxTableRowSubTotal =
+                                    GetDecimal(reader, "taxTableRowSubTotal"),
+
+                                Unit = GetInt(reader, "Unit"),
+                                UnitName = GetString(reader, "UnitName"),
+                                IncludedRate = GetDecimal(reader, "IncludedRate")
+                            });
+                    }
+                }
+
+                return Ok(debitNotes.Values);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "An error occurred while retrieving debit notes."
+                });
+            }
+        }
+
+
+        // =========================================================
+        // SAFE DATA READER HELPERS
+        // Add these methods inside SoftDataAPIController,
+        // outside GetDabitNotesByCompanyId.
+        // =========================================================
+
+        private static string GetString(
+            System.Data.Common.DbDataReader reader,
+            string column)
+        {
+            int index = reader.GetOrdinal(column);
+
+            if (reader.IsDBNull(index))
+                return string.Empty;
+
+            return Convert.ToString(reader.GetValue(index)) ?? string.Empty;
+        }
+
+
+        private static int GetInt(
+            System.Data.Common.DbDataReader reader,
+            string column)
+        {
+            int index = reader.GetOrdinal(column);
+
+            if (reader.IsDBNull(index))
+                return 0;
+
+            object value = reader.GetValue(index);
+
+            if (value is int intValue)
+                return intValue;
+
+            return int.TryParse(
+                Convert.ToString(value),
+                out int result)
+                ? result
+                : 0;
+        }
+
+
+        private static decimal GetDecimal(
+            System.Data.Common.DbDataReader reader,
+            string column)
+        {
+            int index = reader.GetOrdinal(column);
+
+            if (reader.IsDBNull(index))
+                return 0m;
+
+            object value = reader.GetValue(index);
+
+            if (value is decimal decimalValue)
+                return decimalValue;
+
+            return decimal.TryParse(
+                Convert.ToString(value),
+                System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out decimal result)
+                ? result
+                : 0m;
+        }
+
+
+        private static DateTime? GetDateTime(
+            System.Data.Common.DbDataReader reader,
+            string column)
+        {
+            int index = reader.GetOrdinal(column);
+
+            if (reader.IsDBNull(index))
+                return null;
+
+            object value = reader.GetValue(index);
+
+            if (value is DateTime dateTime)
+                return dateTime;
+
+            return DateTime.TryParse(
+                Convert.ToString(value),
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out DateTime result)
+                ? result
+                : null;
+        }
+
+
+
+        [HttpGet("get-DabitNote-by-id/{DabitNoteId}")]
+        public async Task<IActionResult> getDabitNoteById(int DabitNoteId)
+        {
+            try
+            {
+                var dabitNoteIdParam = new SqlParameter("@DabitNoteId", SqlDbType.Int)
+                {
+                    Value = DabitNoteId
+                };
+
+                string jsonResult = string.Empty;
+
+                await using DbConnection connection =
+                    context.Database.GetDbConnection();
+
+                await connection.OpenAsync();
+
+                await using var command = connection.CreateCommand();
+                command.CommandText = "GetDabitNoteSaleById";
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add(dabitNoteIdParam);
+
+                await using var reader =
+                    await command.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    // safer for large JSON
+                    jsonResult += reader.GetValue(0)?.ToString();
+                }
+
+                if (string.IsNullOrWhiteSpace(jsonResult))
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Dabit not Sale not found"
+                    });
+                }
+
+                // Return proper JSON
+                return Content(jsonResult, "application/json");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        success = false,
+                        message = "Internal server error",
+                        error = ex.Message
+                    });
+            }
+        }
+
+
+        [HttpDelete("deleteDabiteNot/{id}")]
+        public async Task<IActionResult> deleteDabiteNotById(int id)
+        {
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(
+                    @"EXEC dbo.DeleteDabitNoteSale @DabitNoteId",
+                    new SqlParameter("@DabitNoteId", id)
+                );
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Dabit Note deleted successfully"
+                });
+            }
+            catch (SqlException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Failed to delete Dabit invoice",
+                    error = ex.Message
+                });
+            }
+        }
+
+
+        [HttpPost("add-edit-cradit-note-purchase")]
+        public async Task<IActionResult> AddEditCraditNoteForPurchase(
+    [FromBody] CraditNoteForPurchaseRequest model)
+        {
+            try
+            {
+                var detailsJson = model.CreditNoteForPurchaseDetails?.Any() == true
+                    ? JsonConvert.SerializeObject(model.CreditNoteForPurchaseDetails)
+                    : "[]";
+
+                var parameters = new[]
+                {
+            new SqlParameter("@CreditNoteForPurchaseId",
+                model.CreditNoteForPurchaseId ?? (object)DBNull.Value),
+
+            new SqlParameter("@SaleInvoiceId",
+                model.SaleInvoiceId ?? (object)DBNull.Value),
+
+            new SqlParameter("@InvoiceHeading",
+                model.InvoiceHeading ?? (object)DBNull.Value),
+
+            new SqlParameter("@InvoiceHeadingInt",
+                model.InvoiceHeadingInt ?? (object)DBNull.Value),
+
+            new SqlParameter("@CompanyId", model.CompanyId),
+
+            new SqlParameter("@InvoiceNo",
+                model.InvoiceNo ?? (object)DBNull.Value),
+
+            new SqlParameter("@InvoiceDate", model.InvoiceDate),
+
+            new SqlParameter("@ClaimDate",
+                model.ClaimDate ?? (object)DBNull.Value),
+
+            new SqlParameter("@AccountId", model.AccountId),
+
+            new SqlParameter("@ShipTo",
+                model.ShipTo ?? (object)DBNull.Value),
+
+            new SqlParameter("@Transport",
+                model.Transport ?? (object)DBNull.Value),
+
+            new SqlParameter("@TransportNameManual",
+                model.TransportNameManual ?? (object)DBNull.Value),
+
+            new SqlParameter("@ShippingBillNo",
+                model.ShippingBillNo ?? (object)DBNull.Value),
+
+            new SqlParameter("@GRNo",
+                model.GRNo ?? (object)DBNull.Value),
+
+            new SqlParameter("@OrderNo",
+                model.OrderNo ?? (object)DBNull.Value),
+
+            new SqlParameter("@Vehicle",
+                model.Vehicle ?? (object)DBNull.Value),
+
+            new SqlParameter("@FormNo",
+                model.FormNo ?? (object)DBNull.Value),
+
+            new SqlParameter("@Weight",
+                model.Weight ?? (object)DBNull.Value),
+
+            new SqlParameter("@CreditDays",
+                model.CreditDays ?? (object)DBNull.Value),
+
+            new SqlParameter("@PackingNo",
+                model.PackingNo ?? (object)DBNull.Value),
+
+            new SqlParameter("@DocuThru",
+                model.DocuThru ?? (object)DBNull.Value),
+
+            new SqlParameter("@Station",
+                model.Station ?? (object)DBNull.Value),
+
+            new SqlParameter("@RGPNo",
+                model.RGPNo ?? (object)DBNull.Value),
+
+            new SqlParameter("@Dated",
+                model.Dated ?? (object)DBNull.Value),
+
+            new SqlParameter("@Freight",
+                model.Freight ?? (object)DBNull.Value),
+
+            new SqlParameter("@Packages",
+                model.Packages ?? (object)DBNull.Value),
+
+            new SqlParameter("@PvtMark",
+                model.PvtMark ?? (object)DBNull.Value),
+
+            new SqlParameter("@DueDate",
+                model.DueDate ?? (object)DBNull.Value),
+
+            new SqlParameter("@EcomGSTIN",
+                model.EcomGSTIN ?? (object)DBNull.Value),
+
+            new SqlParameter("@EwayNo",
+                model.EwayNo ?? (object)DBNull.Value),
+
+            new SqlParameter("@ShBNo",
+                model.ShBNo ?? (object)DBNull.Value),
+
+            new SqlParameter("@ShipDate",
+                model.ShipDate ?? (object)DBNull.Value),
+
+            new SqlParameter("@ShipPartNo",
+                model.ShipPartNo ?? (object)DBNull.Value),
+
+            new SqlParameter("@PortLoading",
+                model.PortLoading ?? (object)DBNull.Value),
+
+            new SqlParameter("@PortDischarge",
+                model.PortDischarge ?? (object)DBNull.Value),
+
+            new SqlParameter("@FinalDestination",
+                model.FinalDestination ?? (object)DBNull.Value),
+
+            new SqlParameter("@EntrBy",
+                model.EntrBy ?? (object)DBNull.Value),
+
+            new SqlParameter("@EntryDate",
+                model.EntryDate ?? (object)DBNull.Value),
+
+            new SqlParameter("@SubTotal",
+                model.SubTotal ?? (object)DBNull.Value),
+
+            new SqlParameter("@RoundAndTotal",
+                model.RoundAndTotal ?? (object)DBNull.Value),
+
+            new SqlParameter("@TaxableSale",
+                model.TaxableSale ?? (object)DBNull.Value),
+
+            new SqlParameter("@CentralGst",
+                model.CentralGst ?? (object)DBNull.Value),
+
+            new SqlParameter("@LocalGst",
+                model.LocalGst ?? (object)DBNull.Value),
+
+            new SqlParameter("@Tcs",
+                model.Tcs ?? (object)DBNull.Value),
+
+            new SqlParameter("@SwachBharat",
+                model.SwachBharat ?? (object)DBNull.Value),
+
+            new SqlParameter("@OtherCharge",
+                model.OtherCharge ?? (object)DBNull.Value),
+
+            new SqlParameter("@Value",
+                model.Value ?? (object)DBNull.Value),
+
+            new SqlParameter("@OtherCharge1",
+                model.OtherCharge1 ?? (object)DBNull.Value),
+
+            new SqlParameter("@Value1",
+                model.Value1 ?? (object)DBNull.Value),
+
+            new SqlParameter("@ExtraAmount",
+                model.ExtraAmount ?? (object)DBNull.Value),
+
+            new SqlParameter("@InvoiceSeq",
+                model.InvoiceSeq ?? (object)DBNull.Value),
+
+            new SqlParameter("@BillNo",
+                model.BillNo ?? (object)DBNull.Value),
+
+            new SqlParameter("@BillDate",
+                model.BillDate ?? (object)DBNull.Value),
+
+            new SqlParameter("@BillAmount",
+                model.BillAmount ?? (object)DBNull.Value),
+
+            new SqlParameter("@BillTaxAmount",
+                model.BillTaxAmount ?? (object)DBNull.Value),
+
+            new SqlParameter("@BillFreight",
+                model.BillFreight ?? (object)DBNull.Value),
+
+            new SqlParameter("@Advance",
+                model.Advance ?? (object)DBNull.Value),
+
+            new SqlParameter(
+                "@CreditNoteForPurchaseDetails",
+                SqlDbType.NVarChar, -1)
+            {
+                Value = detailsJson
+            }
+        };
+
+                var result = await context
+                    .Set<CraditNoteForPurchaseApiResponse>()
+                    .FromSqlRaw(
+                        @"EXEC dbo.sp_AddOrUpdate_CraditNoteForPurchase
+                    @CreditNoteForPurchaseId,
+                    @SaleInvoiceId,
+                    @InvoiceHeading,
+                    @InvoiceHeadingInt,
+                    @CompanyId,
+                    @InvoiceNo,
+                    @InvoiceDate,
+                    @ClaimDate,
+                    @AccountId,
+                    @ShipTo,
+                    @Transport,
+                    @TransportNameManual,
+                    @ShippingBillNo,
+                    @GRNo,
+                    @OrderNo,
+                    @Vehicle,
+                    @FormNo,
+                    @Weight,
+                    @CreditDays,
+                    @PackingNo,
+                    @DocuThru,
+                    @Station,
+                    @RGPNo,
+                    @Dated,
+                    @Freight,
+                    @Packages,
+                    @PvtMark,
+                    @DueDate,
+                    @EcomGSTIN,
+                    @EwayNo,
+                    @ShBNo,
+                    @ShipDate,
+                    @ShipPartNo,
+                    @PortLoading,
+                    @PortDischarge,
+                    @FinalDestination,
+                    @EntrBy,
+                    @EntryDate,
+                    @SubTotal,
+                    @RoundAndTotal,
+                    @TaxableSale,
+                    @CentralGst,
+                    @LocalGst,
+                    @Tcs,
+                    @SwachBharat,
+                    @OtherCharge,
+                    @Value,
+                    @OtherCharge1,
+                    @Value1,
+                    @ExtraAmount,
+                    @InvoiceSeq,
+                    @BillNo,
+                    @BillDate,
+                    @BillAmount,
+                    @BillTaxAmount,
+                    @BillFreight,
+                    @Advance,
+                    @CreditNoteForPurchaseDetails",
+                        parameters)
+                    .ToListAsync();
+
+                return Ok(result.FirstOrDefault());
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+        }
+
+
+        [HttpGet("get-cradit-note-for-purchase-by-company-id/{companyId}")]
+        public async Task<IActionResult> GetCraditNoteForPurchaseByCompanyId(
+     int companyId)
+        {
+            try
+            {
+                var rows = await context
+                    .Set<CraditNoteForPurchaseByCompanyIdDto>()
+                    .FromSqlRaw(
+                        "EXEC dbo.GetCraditNoteForPurchaseByCompanyId @CompanyId = {0}",
+                        companyId)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                var result = rows
+                    .GroupBy(x => x.CreditNoteForPurchaseId)
+                    .Select(g =>
+                    {
+                        var h = g.First();
+
+                        return new CraditNoteForPurchaseResponseDto
+                        {
+                            CreditNoteForPurchaseId = h.CreditNoteForPurchaseId,
+                            SaleInvoiceId = h.SaleInvoiceId,
+                            InvoiceHeading = h.InvoiceHeading,
+                            InvoiceHeadingInt = h.InvoiceHeadingInt,
+                            CompanyId = h.CompanyId,
+                            InvoiceNo = h.InvoiceNo,
+                            InvoiceDate = h.InvoiceDate,
+                            ClaimDate = h.ClaimDate,
+                            AccountId = h.AccountId,
+                            ShipTo = h.ShipTo,
+                            AccountName = h.AccountName,
+                            ShipToName = h.ShipToName,
+                            Transport = h.Transport,
+                            TransportNameManual = h.TransportNameManual,
+
+                            ShippingBillNo = h.ShippingBillNo,
+                            GRNo = h.GRNo,
+                            OrderNo = h.OrderNo,
+                            Vehicle = h.Vehicle,
+                            FormNo = h.FormNo,
+                            Weight = h.Weight,
+                            CreditDays = h.CreditDays,
+                            PackingNo = h.PackingNo,
+                            DocuThru = h.DocuThru,
+                            Station = h.Station,
+                            RGPNo = h.RGPNo,
+                            Dated = h.Dated,
+                            Freight = h.Freight,
+                            Packages = h.Packages,
+                            PvtMark = h.PvtMark,
+                            DueDate = h.DueDate,
+                            EcomGSTIN = h.EcomGSTIN,
+                            EwayNo = h.EwayNo,
+                            ShBNo = h.ShBNo,
+                            ShipDate = h.ShipDate,
+                            ShipPartNo = h.ShipPartNo,
+                            PortLoading = h.PortLoading,
+                            PortDischarge = h.PortDischarge,
+                            FinalDestination = h.FinalDestination,
+                            EntrBy = h.EntrBy,
+                            EntryDate = h.EntryDate,
+
+                            SubTotal = h.SubTotal,
+                            RoundAndTotal = h.RoundAndTotal,
+                            TaxableSale = h.TaxableSale,
+                            CentralGst = h.CentralGst,
+                            LocalGst = h.LocalGst,
+                            Tcs = h.Tcs,
+                            SwachBharat = h.SwachBharat,
+                            OtherCharge = h.OtherCharge,
+                            Value = h.Value,
+                            OtherCharge1 = h.OtherCharge1,
+                            Value1 = h.Value1,
+                            ExtraAmount = h.ExtraAmount,
+                            InvoiceSeq = h.InvoiceSeq,
+
+                            BillNo = h.BillNo,
+                            BillDate = h.BillDate,
+                            BillAmount = h.BillAmount,
+                            BillTaxAmount = h.BillTaxAmount,
+                            BillFreight = h.BillFreight,
+                            Advance = h.Advance,
+
+                            Details = g
+                                .Where(d => d.CreditNoteForPurchaseDetailId != null)
+                                .Select(d => new CraditNoteForPurchaseDetailResponseDto
+                                {
+                                    CreditNoteForPurchaseDetailId =
+                                        d.CreditNoteForPurchaseDetailId,
+                                    SaleInvoiceDetailId = d.SaleInvoiceDetailId,
+                                    DetailSaleInvoiceId = d.DetailSaleInvoiceId,
+                                    Barcode = d.Barcode,
+                                    ItemId = d.ItemId,
+                                    ItemName = d.ItemName,
+                                    Remarks = d.Remarks,
+                                    HSN = d.HSN,
+                                    ArtNo = d.ArtNo,
+                                    Size = d.Size,
+                                    Color = d.Color,
+                                    Pack1 = d.Pack1,
+                                    Pack2 = d.Pack2,
+                                    Qty = d.Qty,
+                                    Rate = d.Rate,
+                                    MRate = d.MRate,
+                                    DiscPer = d.DiscPer,
+                                    DiscAmt = d.DiscAmt,
+                                    TaxableValueId = d.TaxableValueId,
+                                    SalePurcAccountName = d.SalePurcAccountName,
+                                    DetailAccountId = d.DetailAccountId,
+                                    TaxPercent = d.TaxPercent,
+                                    RowTotal = d.RowTotal,
+                                    TaxTableRowSubTotal = d.taxTableRowSubTotal,
+                                    Unit = d.Unit,
+                                    IncludedRate = d.IncludedRate,
+                                    UnitName = d.UnitName
+                                })
+                                .ToList()
+                        };
+                    })
+                    .ToList();
+
+                return Ok(new
+                {
+                    success = true,
+                    message = result.Count > 0
+                        ? "Credit notes retrieved successfully."
+                        : "No credit notes found.",
+                    data = result,
+                    count = result.Count
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "An error occurred while retrieving credit notes."
+                });
+            }
+        }
+
+
+        [HttpGet("get-CraditNoteForPurchase-by-id/{id}")]
+        public async Task<IActionResult> GetCraditNoteForPurchaseById(int id)
+        {
+            try
+            {
+                if (id <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Invalid CreditNoteForPurchaseId."
+                    });
+                }
+
+                var connection = context.Database.GetDbConnection();
+
+                if (connection.State != System.Data.ConnectionState.Open)
+                {
+                    await connection.OpenAsync();
+                }
+
+                string? jsonResult;
+
+                await using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "dbo.GetCraditNoteForPurchaseById";
+                    command.CommandType = System.Data.CommandType.StoredProcedure;
+
+                    var parameter = command.CreateParameter();
+                    parameter.ParameterName = "@CreditNoteForPurchaseId";
+                    parameter.Value = id;
+                    parameter.DbType = System.Data.DbType.Int32;
+
+                    command.Parameters.Add(parameter);
+
+                    var result = await command.ExecuteScalarAsync();
+                    jsonResult = result == null || result == DBNull.Value
+                        ? null
+                        : Convert.ToString(result);
+                }
+
+                if (string.IsNullOrWhiteSpace(jsonResult))
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Credit note for purchase not found."
+                    });
+                }
+
+                using var jsonDocument = System.Text.Json.JsonDocument.Parse(jsonResult);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Credit note for purchase retrieved successfully.",
+                    data = jsonDocument.RootElement.Clone()
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "An error occurred while retrieving credit note for purchase."
+                });
+            }
+        }
+
+        [HttpDelete("delete-CraditNoteForPurchase/{id}")]
+        public async Task<IActionResult> DeleteCraditNoteForPurchase(int id)
+        {
+            try
+            {
+                if (id <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Invalid CreditNoteForPurchaseId."
+                    });
+                }
+
+                var connection = context.Database.GetDbConnection();
+
+                if (connection.State != System.Data.ConnectionState.Open)
+                {
+                    await connection.OpenAsync();
+                }
+
+                await using var command = connection.CreateCommand();
+
+                command.CommandText = "dbo.DeleteCraditNoteForPurchase";
+                command.CommandType = System.Data.CommandType.StoredProcedure;
+
+                var parameter = command.CreateParameter();
+                parameter.ParameterName = "@CreditNoteForPurchaseId";
+                parameter.Value = id;
+                parameter.DbType = System.Data.DbType.Int32;
+
+                command.Parameters.Add(parameter);
+
+                await command.ExecuteNonQueryAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Credit note for purchase deleted successfully."
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "An error occurred while deleting credit note for purchase."
+                });
+            }
+        }
     }
 
 

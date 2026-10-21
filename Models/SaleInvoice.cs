@@ -130,7 +130,7 @@ public partial class SaleInvoiceRequest
     public string? TransportNameManual { get; set; }
     public string? BillNo { get; set; }
 
-    public DateTime? BillDate { get; set; }
+    public string? BillDate { get; set; }
 
     public decimal? BillAmount { get; set; }
 
@@ -243,7 +243,7 @@ public class SaleInvoiceDto
 
     public string? BillNo { get; set; }
 
-    public DateTime? BillDate { get; set; }
+    public string? BillDate { get; set; }
 
     public decimal? BillAmount { get; set; }
 
@@ -359,6 +359,15 @@ public class SaleInvoiceHeaderPdf
     public string? TransportNameManual { get; set; }
     public string? ShippingBillNo { get; set; }
     public string? GRNo { get; set; }
+
+    public string? Vehicle { get; set; }
+    public string? FormNo { get; set; }
+    public string? BillNo { get; set; }
+    public string? BillDate { get; set; }
+    public decimal? BillAmount { get; set; }
+    public decimal? BillTaxAmount { get; set; }
+    public string? BillFreight { get; set; }
+    public decimal? Advance { get; set; }
 
     public decimal? swachBharat { get; set; }
     public decimal? tcs { get; set; }
