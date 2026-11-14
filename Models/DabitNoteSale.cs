@@ -215,7 +215,154 @@ public class DabitNoteSaleDetailDto
         public string? UnitName { get; set; }
         public decimal IncludedRate { get; set; }
     }
+    // ==========================================
+    // DEBIT NOTE SALE HEADER PDF
+    // ==========================================
+    public class DabitNoteSaleHeaderPdf
+    {
+        public int DabitNoteId { get; set; }
+        public int? SaleInvoiceId { get; set; }
+        public string? InvoiceHeading { get; set; }
+        public int? InvoiceHeadingInt { get; set; }
 
+        public int CompanyId { get; set; }
+        public string? InvoiceNo { get; set; }
+        public DateTime? InvoiceDate { get; set; }
+        public DateTime? ClaimDate { get; set; }
+
+        public int? AccountId { get; set; }
+
+        public string? AccountName { get; set; }
+        public string? AccountAddress { get; set; }
+        public string? AccountPhone { get; set; }
+
+        public string? ShipToName { get; set; }
+        public string? ShipToPhone { get; set; }
+
+        public string? TransportName { get; set; }
+        public string? TransportPhone { get; set; }
+        public string? TransportGSTNo { get; set; }
+
+        public string? CityName { get; set; }
+        public string? StateName { get; set; }
+        public string? StateCode { get; set; }
+
+        public string? CompanyName { get; set; }
+        public string? CompanyPhone { get; set; }
+
+        public string? OtherChargeName { get; set; }
+        public string? OtherCharge1Name { get; set; }
+
+        public int? ShipTo { get; set; }
+        public int? Transport { get; set; }
+
+        public string? TransportNameManual { get; set; }
+        public string? ShippingBillNo { get; set; }
+        public string? GRNo { get; set; }
+
+        public string? OrderNo { get; set; }
+        public string? Vehicle { get; set; }
+        public string? FormNo { get; set; }
+
+        public decimal? Weight { get; set; }
+        public int? CreditDays { get; set; }
+        public string? PackingNo { get; set; }
+        public string? DocuThru { get; set; }
+
+        public string? Station { get; set; }
+        public string? RGPNo { get; set; }
+        public DateTime? Dated { get; set; }
+
+        public decimal? Freight { get; set; }
+        public string? Packages { get; set; }
+        public string? PvtMark { get; set; }
+
+        public DateTime? DueDate { get; set; }
+        public string? EcomGSTIN { get; set; }
+        public string? EwayNo { get; set; }
+
+        public string? ShBNo { get; set; }
+        public DateTime? ShipDate { get; set; }
+        public string? ShipPartNo { get; set; }
+
+        public string? PortLoading { get; set; }
+        public string? PortDischarge { get; set; }
+        public string? FinalDestination { get; set; }
+
+        public string? EntrBy { get; set; }
+        public DateTime? EntryDate { get; set; }
+
+        public decimal? SubTotal { get; set; }
+        public decimal? RoundAndTotal { get; set; }
+        public decimal? TaxableSale { get; set; }
+
+        public decimal? CentralGst { get; set; }
+        public decimal? LocalGst { get; set; }
+        public decimal? Tcs { get; set; }
+        public decimal? SwachBharat { get; set; }
+
+        public string? OtherCharge { get; set; }
+        public decimal? Value { get; set; }
+
+        public string? OtherCharge1 { get; set; }
+        public decimal? Value1 { get; set; }
+
+        public decimal? ExtraAmount { get; set; }
+        public string? InvoiceSeq { get; set; }
+
+        public string? BillNo { get; set; }
+        public string? BillDate { get; set; }
+        public decimal? BillAmount { get; set; }
+        public decimal? BillTaxAmount { get; set; }
+        public decimal? BillFreight { get; set; }
+        public decimal? Advance { get; set; }
+    }
+
+
+    // ==========================================
+    // DEBIT NOTE SALE DETAIL PDF
+    // ==========================================
+    public class DabitNoteSaleDetailDtoPdf
+    {
+        public int DabitNoteSaleDetailId { get; set; }
+
+        public int? DabitNoteId { get; set; }
+        public int? SaleInvoiceDetailId { get; set; }
+        public int? SaleInvoiceId { get; set; }
+
+        public string? Barcode { get; set; }
+        public int ItemId { get; set; }
+        public string? ItemName { get; set; }
+
+        public string? Remarks { get; set; }
+        public string? HSN { get; set; }
+        public string? ArtNo { get; set; }
+        public string? Size { get; set; }
+        public string? Color { get; set; }
+
+        public string? Pack1 { get; set; }
+        public string? Pack2 { get; set; }
+
+        public decimal? Qty { get; set; }
+        public decimal? Rate { get; set; }
+        public decimal? MRate { get; set; }
+
+        public decimal? DiscPer { get; set; }
+        public decimal? DiscAmt { get; set; }
+
+        public int? TaxableValueId { get; set; }
+        public int? AccountId { get; set; }
+
+        public decimal? TaxPercent { get; set; }
+        public decimal? RowTotal { get; set; }
+        public decimal? taxTableRowSubTotal { get; set; }
+
+        public int? Unit { get; set; }
+        public string? UnitName { get; set; }
+        public string? SalePurcAccountName { get; set; }
+
+        public decimal? IncludedRate { get; set; }
+    }
 
 
 }

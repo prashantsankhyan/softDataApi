@@ -7,6 +7,8 @@ using Newtonsoft.Json;
 using softDataApi.Models;
 using System.Data;
 using System.Data.Common;
+using System.Text.Json;
+
 using Twilio;
 using Twilio.Rest.Api.V2010.Account;
 using Twilio.Types;
@@ -7929,6 +7931,7 @@ public async Task<IActionResult> GetDabitNotesByCompanyId(int companyId)
                             CreditNoteForPurchaseId = h.CreditNoteForPurchaseId,
                             SaleInvoiceId = h.SaleInvoiceId,
                             InvoiceHeading = h.InvoiceHeading,
+                            TypeOfPurchase = h.TypeOfPurchase,
                             InvoiceHeadingInt = h.InvoiceHeadingInt,
                             CompanyId = h.CompanyId,
                             InvoiceNo = h.InvoiceNo,
@@ -8167,6 +8170,1112 @@ public async Task<IActionResult> GetDabitNotesByCompanyId(int companyId)
                 });
             }
         }
+        [HttpGet("get-debit-note-sale-For-Pdf-id/{id}")]
+        public async Task<IActionResult> GetDabitNoteSaleForPdfById(int id)
+        {
+            try
+            {
+                var header = new DabitNoteSaleHeaderPdf();
+                var details = new List<DabitNoteSaleDetailDtoPdf>();
+
+                using var conn = context.Database.GetDbConnection();
+                await conn.OpenAsync();
+
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "dbo.GetDabitNoteSaleByIdForPDF";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                var param = cmd.CreateParameter();
+                param.ParameterName = "@DabitNoteId";
+                param.Value = id;
+                cmd.Parameters.Add(param);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                // --------------------------------
+                // 1. Read Header
+                // --------------------------------
+                if (await reader.ReadAsync())
+                {
+                    header.DabitNoteId = Convert.ToInt32(reader["DabitNoteId"]);
+
+                    header.SaleInvoiceId = reader["SaleInvoiceId"] as int?;
+                    header.InvoiceHeading = reader["InvoiceHeading"]?.ToString();
+                    header.InvoiceHeadingInt = reader["InvoiceHeadingInt"] as int?;
+
+                    header.CompanyId = Convert.ToInt32(reader["CompanyId"]);
+                    header.InvoiceNo = reader["InvoiceNo"]?.ToString();
+
+                    header.InvoiceDate = reader["InvoiceDate"] as DateTime?;
+                    header.ClaimDate = reader["ClaimDate"] as DateTime?;
+
+                    header.AccountId = reader["AccountId"] as int?;
+                    header.AccountName = reader["AccountName"]?.ToString();
+                    header.AccountAddress = reader["AccountAddress"]?.ToString();
+                    header.AccountPhone = reader["AccountPhone"]?.ToString();
+
+                    header.ShipToName = reader["ShipToName"]?.ToString();
+                    header.ShipToPhone = reader["ShipToPhone"]?.ToString();
+
+                    header.Transport = reader["Transport"] as int?;
+                    header.TransportName = reader["TransportName"]?.ToString();
+                    header.TransportPhone = reader["TransportPhone"]?.ToString();
+                    header.TransportGSTNo = reader["TransportGSTNo"]?.ToString();
+                    header.TransportNameManual = reader["TransportNameManual"]?.ToString();
+
+                    header.CityName = reader["CityName"]?.ToString();
+                    header.StateName = reader["StateName"]?.ToString();
+                    header.StateCode = reader["StateCode"]?.ToString();
+
+                    // Company Details
+                    header.CompanyName = reader["CompanyName"]?.ToString();
+                    header.CompanyPhone = reader["CompanyPhone"]?.ToString();
+
+                    header.OtherChargeName = reader["OtherChargeName"]?.ToString();
+                    header.OtherCharge1Name = reader["OtherCharge1Name"]?.ToString();
+
+                    header.ShipTo = reader["ShipTo"] as int?;
+                    header.Transport = reader["Transport"] as int?;
+
+                    header.TransportNameManual = reader["TransportNameManual"]?.ToString();
+                    header.ShippingBillNo = reader["ShippingBillNo"]?.ToString();
+                    header.GRNo = reader["GRNo"]?.ToString();
+
+                    header.OrderNo = reader["OrderNo"]?.ToString();
+                    header.Vehicle = reader["Vehicle"]?.ToString();
+                    header.FormNo = reader["FormNo"]?.ToString();
+
+                    header.Weight = reader["Weight"] as decimal?;
+                    header.CreditDays = reader["CreditDays"] as int?;
+                    header.PackingNo = reader["PackingNo"]?.ToString();
+                    header.DocuThru = reader["DocuThru"]?.ToString();
+
+                    header.Station = reader["Station"]?.ToString();
+                    header.RGPNo = reader["RGPNo"]?.ToString();
+                    header.Dated = reader["Dated"] as DateTime?;
+
+                    header.Freight = reader["Freight"] as decimal?;
+                    header.Packages = reader["Packages"]?.ToString();
+                    header.PvtMark = reader["PvtMark"]?.ToString();
+
+                    header.DueDate = reader["DueDate"] as DateTime?;
+                    header.EcomGSTIN = reader["EcomGSTIN"]?.ToString();
+                    header.EwayNo = reader["EwayNo"]?.ToString();
+
+                    header.ShBNo = reader["ShBNo"]?.ToString();
+                    header.ShipDate = reader["ShipDate"] as DateTime?;
+                    header.ShipPartNo = reader["ShipPartNo"]?.ToString();
+
+                    header.PortLoading = reader["PortLoading"]?.ToString();
+                    header.PortDischarge = reader["PortDischarge"]?.ToString();
+                    header.FinalDestination = reader["FinalDestination"]?.ToString();
+
+                    header.EntrBy = reader["EntrBy"]?.ToString();
+                    header.EntryDate = reader["EntryDate"] as DateTime?;
+
+                    header.SubTotal = reader["SubTotal"] as decimal?;
+                    header.RoundAndTotal = reader["RoundAndTotal"] as decimal?;
+                    header.TaxableSale = reader["TaxableSale"] as decimal?;
+
+                    header.CentralGst = reader["CentralGst"] as decimal?;
+                    header.LocalGst = reader["LocalGst"] as decimal?;
+                    header.Tcs = reader["Tcs"] as decimal?;
+                    header.SwachBharat = reader["SwachBharat"] as decimal?;
+
+                    header.OtherCharge = reader["OtherCharge"]?.ToString();
+                    header.Value = reader["Value"] as decimal?;
+
+                    header.OtherCharge1 = reader["OtherCharge1"]?.ToString();
+                    header.Value1 = reader["Value1"] as decimal?;
+
+                    header.ExtraAmount = reader["ExtraAmount"] as decimal?;
+                    header.InvoiceSeq = reader["InvoiceSeq"]?.ToString();
+
+                    header.BillNo = reader["BillNo"]?.ToString();
+                    header.BillDate = reader["BillDate"]?.ToString();
+                    header.BillAmount = reader["BillAmount"] as decimal?;
+                    header.BillTaxAmount = reader["BillTaxAmount"] as decimal?;
+                    header.BillFreight = reader["BillFreight"] as decimal?;
+                    header.Advance = reader["Advance"] as decimal?;
+                }
+
+                // Debit Note not found
+                if (header.DabitNoteId == 0)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Debit Note not found"
+                    });
+                }
+
+                // --------------------------------
+                // 2. Read Details
+                // --------------------------------
+                if (await reader.NextResultAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        details.Add(new DabitNoteSaleDetailDtoPdf
+                        {
+                            DabitNoteSaleDetailId = Convert.ToInt32(reader["DabitNoteSaleDetailId"]),
+
+                            DabitNoteId = reader["DabitNoteId"] as int?,
+                            SaleInvoiceDetailId = reader["SaleInvoiceDetailId"] as int?,
+                            SaleInvoiceId = reader["SaleInvoiceId"] as int?,
+
+                            Barcode = reader["Barcode"]?.ToString(),
+                            ItemId = Convert.ToInt32(reader["ItemId"]),
+                            ItemName = reader["ItemName"]?.ToString(),
+
+                            Remarks = reader["Remarks"]?.ToString(),
+                            HSN = reader["HSN"]?.ToString(),
+                            ArtNo = reader["ArtNo"]?.ToString(),
+                            Size = reader["Size"]?.ToString(),
+                            Color = reader["Color"]?.ToString(),
+
+                            Pack1 = reader["Pack1"]?.ToString(),
+                            Pack2 = reader["Pack2"]?.ToString(),
+
+                            Qty = reader["Qty"] as decimal?,
+                            Rate = reader["Rate"] as decimal?,
+                            MRate = reader["MRate"] as decimal?,
+
+                            DiscPer = reader["DiscPer"] as decimal?,
+                            DiscAmt = reader["DiscAmt"] as decimal?,
+
+                            TaxableValueId = reader["TaxableValueId"] as int?,
+
+                            // SQL में DetailAccountId alias दिया है
+                            AccountId = reader["DetailAccountId"] as int?,
+
+                            TaxPercent = reader["TaxPercent"] as decimal?,
+                            RowTotal = reader["RowTotal"] as decimal?,
+                            taxTableRowSubTotal = reader["taxTableRowSubTotal"] as decimal?,
+
+                            // Unit को string के रूप में पढ़ें
+                            Unit = reader["Unit"] as int?,
+
+                            IncludedRate = reader["IncludedRate"] as decimal?
+                        });
+                    }
+                }
+
+                // --------------------------------
+                // 3. Final Response
+                // --------------------------------
+                return Ok(new
+                {
+                    success = true,
+                    header,
+                    details
+                });
+            }
+            catch (SqlException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Failed to fetch Debit Note",
+                    error = ex.Message
+                });
+            }
+        }
+
+
+
+        [HttpGet("get-credit-note-purchase-For-Pdf-id/{id}")]
+        public async Task<IActionResult> GetCreditNoteForPurchasePdfById(int id)
+        {
+            try
+            {
+                var header = new CreditNoteForPurchaseHeaderPdf();
+                var details = new List<CreditNoteForPurchaseDetailDtoPdf>();
+
+                using var conn = context.Database.GetDbConnection();
+                await conn.OpenAsync();
+
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "dbo.GetCreditNoteForPurchaseByIdForPDF";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                var param = cmd.CreateParameter();
+                param.ParameterName = "@CreditNoteForPurchaseId";
+                param.Value = id;
+                cmd.Parameters.Add(param);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                // --------------------------------
+                // 1. Read Header
+                // --------------------------------
+                if (await reader.ReadAsync())
+                {
+                    header.CreditNoteForPurchaseId =
+                        Convert.ToInt32(reader["CreditNoteForPurchaseId"]);
+
+                    header.SaleInvoiceId = reader["SaleInvoiceId"] as int?;
+                    header.PurchaseInvoiceId = reader["PurchaseInvoiceId"] as int?;
+
+                    header.InvoiceHeading = reader["InvoiceHeading"]?.ToString();
+                    header.InvoiceHeadingInt = reader["InvoiceHeadingInt"] as int?;
+
+                    header.CompanyId = Convert.ToInt32(reader["CompanyId"]);
+                    header.InvoiceNo = reader["InvoiceNo"]?.ToString();
+
+                    header.InvoiceDate = reader["InvoiceDate"] as DateTime?;
+                    header.ClaimDate = reader["ClaimDate"] as DateTime?;
+
+                    // Main Account Details
+                    header.AccountId = reader["AccountId"] as int?;
+                    header.AccountName = reader["AccountName"]?.ToString();
+                    header.AccountAddress = reader["AccountAddress"]?.ToString();
+                    header.AccountPhone = reader["AccountPhone"]?.ToString();
+
+                    // Ship To Details
+                    header.ShipTo = reader["ShipTo"] as int?;
+                    header.ShipToName = reader["ShipToName"]?.ToString();
+                    header.ShipToPhone = reader["ShipToPhone"]?.ToString();
+
+                    // Transport Details
+                    header.Transport = reader["Transport"] as int?;
+                    header.TransportName = reader["TransportName"]?.ToString();
+                    header.TransportPhone = reader["TransportPhone"]?.ToString();
+                    header.TransportGSTNo = reader["TransportGSTNo"]?.ToString();
+                    header.TransportNameManual = reader["TransportNameManual"]?.ToString();
+
+                    header.ShippingBillNo = reader["ShippingBillNo"]?.ToString();
+                    header.GRNo = reader["GRNo"]?.ToString();
+
+                    header.OrderNo = reader["OrderNo"]?.ToString();
+                    header.Vehicle = reader["Vehicle"]?.ToString();
+                    header.FormNo = reader["FormNo"]?.ToString();
+
+                    header.Weight = reader["Weight"]?.ToString();
+                    header.CreditDays = reader["CreditDays"]?.ToString();
+                    header.PackingNo = reader["PackingNo"]?.ToString();
+                    header.DocuThru = reader["DocuThru"]?.ToString();
+
+                    header.Station = reader["Station"]?.ToString();
+                    header.RGPNo = reader["RGPNo"]?.ToString();
+                    header.Dated = reader["Dated"]?.ToString();
+
+                    header.Freight = reader["Freight"]?.ToString();
+
+                    // Bill Details
+                    header.BillNo = reader["BillNo"]?.ToString();
+                    header.BillDate = reader["BillDate"]?.ToString();
+                    header.BillAmount = reader["BillAmount"] as decimal?;
+                    header.BillTaxAmount = reader["BillTaxAmount"] as decimal?;
+                    header.BillFreight = reader["BillFreight"]?.ToString();
+                    header.Advance = reader["Advance"] as decimal?;
+
+                    // Shipping Details
+                    header.Packages = reader["Packages"]?.ToString();
+                    header.PvtMark = reader["PvtMark"]?.ToString();
+                    header.DueDate = reader["DueDate"]?.ToString();
+                    header.EcomGSTIN = reader["EcomGSTIN"]?.ToString();
+                    header.EwayNo = reader["EwayNo"]?.ToString();
+
+                    header.ShBNo = reader["ShBNo"]?.ToString();
+                    header.ShipDate = reader["ShipDate"]?.ToString();
+                    header.ShipPartNo = reader["ShipPartNo"]?.ToString();
+
+                    header.PortLoading = reader["PortLoading"]?.ToString();
+                    header.PortDischarge = reader["PortDischarge"]?.ToString();
+                    header.FinalDestination = reader["FinalDestination"]?.ToString();
+
+                    header.EntrBy = reader["EntrBy"]?.ToString();
+                    header.EntryDate = reader["EntryDate"] as DateTime?;
+
+                    // Amount Fields
+                    header.SubTotal = reader["SubTotal"] as decimal?;
+                    header.RoundAndTotal = reader["RoundAndTotal"] as decimal?;
+                    header.TaxableSale = reader["TaxableSale"] as decimal?;
+
+                    header.CentralGst = reader["CentralGst"] as decimal?;
+                    header.LocalGst = reader["LocalGst"] as decimal?;
+                    header.Tcs = reader["Tcs"] as decimal?;
+                    header.SwachBharat = reader["SwachBharat"] as decimal?;
+
+                    header.ExtraAmount = reader["ExtraAmount"] as decimal?;
+                    header.InvoiceSeq = reader["InvoiceSeq"] as int?;
+
+                    // Other Charges
+                    header.OtherCharge = reader["OtherCharge"] as int?;
+                    header.OtherCharge1 = reader["OtherCharge1"] as int?;
+
+                    header.OtherChargeName = reader["OtherChargeName"]?.ToString();
+                 
+                    header.Value = reader["Value"] as decimal?;
+
+                    header.OtherCharge1Name = reader["OtherCharge1Name"]?.ToString();
+                    header.Value1 = reader["Value1"] as decimal?;
+
+                    // City & State
+                    header.CityId = reader["CityId"] as int?;
+                    header.CityName = reader["CityName"]?.ToString();
+                    header.StateName = reader["StateName"]?.ToString();
+                    header.StateCode = reader["StateCode"]?.ToString();
+
+                    // Company Details
+                    header.CompanyName = reader["CompanyName"]?.ToString();
+                    header.CompanyPhone = reader["CompanyPhone"]?.ToString();
+                }
+
+                // Credit Note not found
+                if (header.CreditNoteForPurchaseId == 0)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Credit Note for Purchase not found"
+                    });
+                }
+
+                // --------------------------------
+                // 2. Read Details
+                // --------------------------------
+                if (await reader.NextResultAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        details.Add(new CreditNoteForPurchaseDetailDtoPdf
+                        {
+                            CreditNoteForPurchaseDetailId =
+                                Convert.ToInt32(reader["CreditNoteForPurchaseDetailId"]),
+
+                            CreditNoteForPurchaseId =
+                                reader["CreditNoteForPurchaseId"] as int?,
+
+                            SaleInvoiceDetailId =
+                                reader["SaleInvoiceDetailId"] as int?,
+
+                            SaleInvoiceId =
+                                reader["SaleInvoiceId"] as int?,
+
+                            Barcode = reader["Barcode"]?.ToString(),
+                            ItemId = Convert.ToInt32(reader["ItemId"]),
+                            ItemName = reader["ItemName"]?.ToString(),
+
+                            Remarks = reader["Remarks"]?.ToString(),
+                            HSN = reader["HSN"]?.ToString(),
+                            ArtNo = reader["ArtNo"]?.ToString(),
+                            Size = reader["Size"]?.ToString(),
+                            Color = reader["Color"]?.ToString(),
+
+                            Pack1 = reader["Pack1"]?.ToString(),
+                            Pack2 = reader["Pack2"]?.ToString(),
+
+                            Qty = reader["Qty"] as decimal?,
+                            Rate = reader["Rate"] as decimal?,
+                            MRate = reader["MRate"] as decimal?,
+
+                            DiscPer = reader["DiscPer"] as decimal?,
+                            DiscAmt = reader["DiscAmt"] as decimal?,
+
+                            TaxableValueId = reader["TaxableValueId"] as int?,
+
+                            // Detail Account
+                            DetailAccountId = reader["DetailAccountId"] as int?,
+                            AccountName = reader["AccountName"]?.ToString(),
+
+                            TaxPercent = reader["TaxPercent"] as decimal?,
+                            RowTotal = reader["RowTotal"] as decimal?,
+                            TaxTableRowSubTotal = reader["taxTableRowSubTotal"] as decimal?,
+
+                            Unit = reader["Unit"] as int?,
+
+                            IncludedRate = reader["IncludedRate"] as decimal?
+                        });
+                    }
+                }
+
+                // --------------------------------
+                // 3. Final Response
+                // --------------------------------
+                return Ok(new
+                {
+                    success = true,
+                    header,
+                    details
+                });
+            }
+            catch (SqlException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Failed to fetch Credit Note for Purchase",
+                    error = ex.Message
+                });
+            }
+        }
+
+        [HttpPost("add-edit-journal-voucher")]
+        public async Task<IActionResult> AddEditVoucher([FromBody] VoucherMaster model)
+        {
+            try
+            {
+                var detailsJson = model.Details != null && model.Details.Any()
+                    ? JsonConvert.SerializeObject(model.Details)
+                    : "[]";
+
+                var parameters = new[]
+                {
+            new SqlParameter("@Id", model.Id ?? 0),
+            new SqlParameter("@CompanyId", model.CompanyId),
+            new SqlParameter("@Type", model.Type),
+            new SqlParameter("@Date", model.Date ?? (object)DBNull.Value),
+            new SqlParameter("@Day", model.Day ?? (object)DBNull.Value),
+            new SqlParameter("@SeriaNumber", model.SeriaNumber ?? (object)DBNull.Value),
+            new SqlParameter("@DTotal", model.DTotal),
+            new SqlParameter("@CTotal", model.CTotal),
+
+            new SqlParameter("@Details", SqlDbType.NVarChar, -1)
+            {
+                Value = detailsJson
+            }
+        };
+
+                var result = await context
+                    .Set<VoucherResponse>()
+                    .FromSqlRaw(
+                        @"EXEC dbo.AddEditVoucher
+                    @Id,
+                    @CompanyId,
+                    @Type,
+                    @Date,
+                    @Day,
+                    @SeriaNumber,
+                    @DTotal,
+                    @CTotal,
+                    @Details",
+                        parameters)
+                    .ToListAsync();
+
+                return Ok(result.FirstOrDefault());
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+        }
+
+
+        [HttpGet("GetVoucherByCompanyId/{companyId}")]
+        public async Task<IActionResult> GetVoucherByCompanyId(int companyId)
+        {
+            try
+            {
+                var vouchers = new List<VoucherDto>();
+
+                using var conn = context.Database.GetDbConnection();
+
+                await conn.OpenAsync();
+
+                using var cmd = conn.CreateCommand();
+
+                cmd.CommandText = "GetVoucherByCompanyId";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add(
+                    new SqlParameter("@CompanyId", companyId)
+                );
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    var voucher = new VoucherDto
+                    {
+                        Id = reader.Get<int>("Id"),
+
+                        CompanyId = reader.Get<int>("CompanyId"),
+
+                        Type = reader.Get<int>("Type"),
+
+                        Date = reader.Get<DateTime>("Date"),
+
+                        Day = reader.Get<string>("Day"),
+
+                        SeriaNumber = reader.Get<string>("SeriaNumber"),
+
+                        DTotal = reader.Get<decimal>("DTotal"),
+
+                        CTotal = reader.Get<decimal>("CTotal"),
+
+                        Details = !reader.IsDBNull(reader.GetOrdinal("Details"))
+                        ? JsonConvert.DeserializeObject<List<VoucherDetailDto>>(
+                         reader["Details"].ToString() ?? "[]"
+                         ) ?? new List<VoucherDetailDto>()
+                        : new List<VoucherDetailDto>()
+                    };
+
+                    vouchers.Add(voucher);
+                }
+
+                return Ok(vouchers);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = 0,
+                    Message = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("journalVoucherType")]
+        public async Task<IActionResult> GetVoucherType()
+        {
+            try
+            {
+                var data = await context.Database
+                    .SqlQuery<JournalVoucherType>(
+                        $"SELECT * FROM VoucherType"
+                    )
+                    .ToListAsync();
+
+                return Ok(data);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = 0,
+                    Message = ex.Message
+                });
+            }
+        }
+
+
+        [HttpGet("GetVoucherById/{id}")]
+        public async Task<IActionResult> GetVoucherById(int id)
+        {
+            try
+            {
+                VoucherDto? voucher = null;
+
+                using var conn = context.Database.GetDbConnection();
+
+                await conn.OpenAsync();
+
+                using var cmd = conn.CreateCommand();
+
+                cmd.CommandText = "GetVoucherById";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add(
+                    new SqlParameter("@Id", id)
+                );
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                if (await reader.ReadAsync())
+                {
+                    voucher = new VoucherDto
+                    {
+                        Id = reader.Get<int>("Id"),
+
+                        CompanyId = reader.Get<int>("CompanyId"),
+
+                        Type = reader.Get<int>("Type"),
+
+                        Date = reader.Get<DateTime>("Date"),
+
+                        Day = reader.Get<string>("Day"),
+
+                        SeriaNumber = reader.Get<string>("SeriaNumber"),
+
+                        DTotal = reader.Get<decimal>("DTotal"),
+
+                        CTotal = reader.Get<decimal>("CTotal"),
+
+                        Details = !reader.IsDBNull(reader.GetOrdinal("Details"))
+                            ? JsonConvert.DeserializeObject<List<VoucherDetailDto>>(
+                                reader["Details"].ToString() ?? "[]"
+                              ) ?? new List<VoucherDetailDto>()
+                            : new List<VoucherDetailDto>()
+                    };
+
+                    return Ok(voucher);
+                }
+
+                return NotFound(new
+                {
+                    Success = 0,
+                    Message = "Voucher not found."
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = 0,
+                    Message = ex.Message
+                });
+            }
+        }
+
+        [HttpDelete("DeleteVoucher/{id}")]
+        public async Task<IActionResult> DeleteVoucher(int id)
+        {
+            try
+            {
+                using var conn = context.Database.GetDbConnection();
+
+                await conn.OpenAsync();
+
+                using var cmd = conn.CreateCommand();
+
+                cmd.CommandText = "DeleteVoucher";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add(
+                    new SqlParameter("@Id", id)
+                );
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                if (await reader.ReadAsync())
+                {
+                    int success = reader.Get<int>("Success");
+                    string message = reader["Message"]?.ToString() ?? "";
+
+                    return Ok(new
+                    {
+                        Success = success,
+                        Message = message
+                    });
+                }
+
+                return BadRequest(new
+                {
+                    Success = 0,
+                    Message = "Unable to delete voucher."
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = 0,
+                    Message = ex.Message
+                });
+            }
+        }
+
+
+
+
+
+        [HttpPost("dabit-note-sale-heading")]
+        public IActionResult AddEditDabitNoteSaleHeading([FromBody] dabitNoteSaleHeading model)
+        {
+            try
+            {
+                var result = context.CommonSpResponse
+                    .FromSqlRaw(
+                        @"EXEC dbo.AddEditDabitNoteSaleHeading 
+                    @Id, 
+                    @CompanyId, 
+                    @TypeOfSale, 
+                    @Prefix, 
+                    @Suffix, 
+                    @TaxOnSaleType, 
+                    @NumberStartFrom,
+                    @Permission",
+                        new SqlParameter("@Id", model.Id),
+                        new SqlParameter("@CompanyId", model.CompanyId),
+                        new SqlParameter("@TypeOfSale", model.TypeOfSale),
+                        new SqlParameter("@Prefix", (object?)model.Prefix ?? DBNull.Value),
+                        new SqlParameter("@Suffix", (object?)model.Suffix ?? DBNull.Value),
+                        new SqlParameter("@TaxOnSaleType", model.TaxOnSaleType),
+                        new SqlParameter("@NumberStartFrom", model.NumberStartFrom),
+                         new SqlParameter("@Permission", model.Permission)
+                    )
+                    .AsNoTracking()
+                    .AsEnumerable()     // ✅ required for EXEC
+                    .FirstOrDefault();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = 0,
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("dabit-sale-heading-by-company/{companyId}")]
+        public async Task<IActionResult> GetDabitNoteSaleHeadingByCompanyId(int companyId)
+        {
+            try
+            {
+                var companyParam = new SqlParameter("@CompanyId", companyId);
+
+                var data = await context.dabitNoteSaleHeading
+                    .FromSqlRaw("EXEC dbo.GetDabitNoteSaleHeadingByCompanyId @CompanyId", companyParam)
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    count = data.Count,
+                    data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("dabit-by-id/{id}")]
+        public async Task<IActionResult> GetDabitNoteSaleHeadingById(int id)
+        {
+            try
+            {
+                var idParam = new SqlParameter("@Id", id);
+
+                var data = context.dabitNoteSaleHeading
+                    .FromSqlRaw("EXEC dbo.GetDabitNoteSaleHeadingById @Id", idParam)
+                    .AsEnumerable()     // 🔥 REQUIRED
+                    .FirstOrDefault();
+
+                if (data == null)
+                {
+                    return Ok(new
+                    {
+                        success = false,
+                        message = "Record not found"
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpDelete("dabit-sale-headind-delete/{id}")]
+        public async Task<IActionResult> DeleteDabitNoteSaleHeadingById(int id)
+        {
+            try
+            {
+                var idParam = new SqlParameter("@Id", id);
+
+                var resultParam = new SqlParameter("@Result", SqlDbType.Int)
+                {
+                    Direction = ParameterDirection.Output
+                };
+
+                await context.Database.ExecuteSqlRawAsync(
+                    "EXEC dbo.DeleteDabitNoteSaleHeadingById @Id, @Result OUTPUT",
+                    idParam,
+                    resultParam
+                );
+
+                int result = resultParam.Value != DBNull.Value
+                    ? Convert.ToInt32(resultParam.Value)
+                    : 0;
+
+                if (result == 1)
+                    return Ok(new { success = true, message = "Heading deleted successfully" });
+
+                if (result == 0)
+                    return Ok(new { success = false, message = "Heading not found" });
+
+                if (result == -1)
+                    return Ok(new { success = false, message = "Cannot delete. Heading is used in Sale Invoice." });
+
+                return StatusCode(500, new { success = false, message = "Unexpected result" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Failed to delete Sale Heading",
+                    error = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("get-next-dabit-note-no")]
+        public IActionResult GetNextDabitNoteNo(
+    int companyId,
+    int invoiceHeadingInt,
+    int startFrom,
+    string? prefix,
+    string? suffix)
+        {
+            try
+            {
+                var result = context.Set<NextDabitNoteNoDto>()
+                    .FromSqlRaw(
+                        "EXEC dbo.GetNextDabitNoteNo @CompanyId, @InvoiceHeading, @StartFrom, @Prefix, @Suffix",
+                        new SqlParameter("@CompanyId", companyId),
+                        new SqlParameter("@InvoiceHeading", invoiceHeadingInt),
+                        new SqlParameter("@StartFrom", startFrom),
+                        new SqlParameter("@Prefix", (object?)prefix ?? DBNull.Value),
+                        new SqlParameter("@Suffix", (object?)suffix ?? DBNull.Value)
+                    )
+                    .AsEnumerable()
+                    .FirstOrDefault();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message,
+                    stack = ex.StackTrace
+                });
+            }
+        }
+
+
+        [HttpPost("credit-note-purchase-heading")]
+        public IActionResult AddEditCreditNoteforPurchaseHeading([FromBody] creditNotePurchaseHeading model)
+        {
+            try
+            {
+                var result = context.CommonSpResponse
+                    .FromSqlRaw(
+                        @"EXEC dbo.AddEditCreditNoteHeading 
+                    @Id, 
+                    @CompanyId, 
+                    @TypeOfSale, 
+                    @Prefix, 
+                    @Suffix, 
+                    @TaxOnSaleType, 
+                    @NumberStartFrom,
+                    @Permission",
+                        new SqlParameter("@Id", model.Id),
+                        new SqlParameter("@CompanyId", model.CompanyId),
+                        new SqlParameter("@TypeOfSale", model.TypeOfSale),
+                        new SqlParameter("@Prefix", (object?)model.Prefix ?? DBNull.Value),
+                        new SqlParameter("@Suffix", (object?)model.Suffix ?? DBNull.Value),
+                        new SqlParameter("@TaxOnSaleType", model.TaxOnSaleType),
+                        new SqlParameter("@NumberStartFrom", model.NumberStartFrom),
+                         new SqlParameter("@Permission", model.Permission)
+                    )
+                    .AsNoTracking()
+                    .AsEnumerable()     // ✅ required for EXEC
+                    .FirstOrDefault();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = 0,
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("credit-note-purchase-heading-by-company/{companyId}")]
+        public async Task<IActionResult> GetCreditNotePurchaseHeadingByCompanyId(int companyId)
+        {
+            try
+            {
+                var companyParam = new SqlParameter("@CompanyId", companyId);
+
+                var data = await context.creditNotePurchaseHeading
+                    .FromSqlRaw("EXEC dbo.GetCreditNoteHeadingByCompanyId @CompanyId", companyParam)
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    count = data.Count,
+                    data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("creditNote-by-id/{id}")]
+        public async Task<IActionResult> GetCreditNotePurchaseHeadingById(int id)
+        {
+            try
+            {
+                var idParam = new SqlParameter("@Id", id);
+
+                var data = context.creditNotePurchaseHeading
+                    .FromSqlRaw("EXEC dbo.GetCreditNoteHeadingById @Id", idParam)
+                    .AsEnumerable()     // 🔥 REQUIRED
+                    .FirstOrDefault();
+
+                if (data == null)
+                {
+                    return Ok(new
+                    {
+                        success = false,
+                        message = "Record not found"
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpDelete("credit-purchae-headind-delete/{id}")]
+        public async Task<IActionResult> DeleteCreditNoteHeadingById(int id)
+        {
+            try
+            {
+                var idParam = new SqlParameter("@Id", id);
+
+                var resultParam = new SqlParameter("@Result", SqlDbType.Int)
+                {
+                    Direction = ParameterDirection.Output
+                };
+
+                await context.Database.ExecuteSqlRawAsync(
+                    "EXEC dbo.DeleteCreditNoteHeadingById @Id, @Result OUTPUT",
+                    idParam,
+                    resultParam
+                );
+
+                int result = resultParam.Value != DBNull.Value
+                    ? Convert.ToInt32(resultParam.Value)
+                    : 0;
+
+                if (result == 1)
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "Credit Note Heading deleted successfully"
+                    });
+
+                if (result == 0)
+                    return Ok(new
+                    {
+                        success = false,
+                        message = "Credit Note Heading not found"
+                    });
+
+                if (result == -1)
+                    return Ok(new
+                    {
+                        success = false,
+                        message = "Cannot delete. Heading is already used."
+                    });
+
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Unexpected result"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Failed to delete Credit Note Heading",
+                    error = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("get-next-credit-note-no")]
+        public IActionResult GetNextCreditNoteNo(
+    int companyId,
+    int invoiceHeadingInt,
+    int startFrom,
+    string? prefix,
+    string? suffix)
+        {
+            try
+            {
+                var result = context.Set<NextCreditNoteNoDto>()
+                    .FromSqlRaw(
+                        "EXEC dbo.GetNextCreditNoteNo @CompanyId, @InvoiceHeading, @StartFrom, @Prefix, @Suffix",
+                        new SqlParameter("@CompanyId", companyId),
+                        new SqlParameter("@InvoiceHeading", invoiceHeadingInt),
+                        new SqlParameter("@StartFrom", startFrom),
+                        new SqlParameter("@Prefix", (object?)prefix ?? DBNull.Value),
+                        new SqlParameter("@Suffix", (object?)suffix ?? DBNull.Value)
+                    )
+                    .AsEnumerable()
+                    .FirstOrDefault();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message,
+                    stack = ex.StackTrace
+                });
+            }
+        }
+
     }
 
 

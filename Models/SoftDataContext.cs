@@ -21,6 +21,12 @@ public partial class SoftDataContext : DbContext
     public virtual DbSet<SaleHeading> SaleHeadings { get; set; }
     public DbSet<SaleHeadingDto> SaleHeadingDto { get; set; }
 
+    public DbSet<dabitNoteSaleHeading> dabitNoteSaleHeading { get; set; }
+
+    public DbSet<creditNotePurchaseHeading> creditNotePurchaseHeading { get; set; }
+
+
+
     public DbSet<purchaseById> purchaseById { get; set; }
 
     
@@ -111,9 +117,14 @@ public partial class SoftDataContext : DbContext
     public virtual DbSet<TbUserGroupMapping> TbUserGroupMappings { get; set; }
 
     public virtual DbSet<PaymentReceiptResponse> PaymentReceiptResponse { get; set; }
+    public virtual DbSet<VoucherResponse> VoucherResponse { get; set; }
     public DbSet<AccountDuplicateCheckDto> AccountDuplicateCheckDto { get; set; }
 
+    public DbSet<NextDabitNoteNoDto> NextDabitNoteNo { get; set; }
 
+    public DbSet<NextCreditNoteNoDto> NextCreditNoteNoDto { get; set; }
+
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("dharmesh");
@@ -623,7 +634,9 @@ public partial class SoftDataContext : DbContext
         modelBuilder.Entity<AccountByIdDto>().HasNoKey();
         modelBuilder.Entity<GroupMasterZero>().HasNoKey();
         modelBuilder.Entity<ItemGroupDTOComanyId>().HasNoKey();
-        
+        modelBuilder.Entity<NextDabitNoteNoDto>().HasNoKey();
+        modelBuilder.Entity<NextCreditNoteNoDto>().HasNoKey();
+
         modelBuilder.Entity<AccountDuplicateCheckDto>()
     .HasNoKey();
         modelBuilder.Entity<TbGroupCategoryMaster>(entity =>
@@ -741,6 +754,7 @@ public partial class SoftDataContext : DbContext
     .HasNoKey();
 
         modelBuilder.Entity<PaymentReceiptResponse>().HasNoKey();
+        modelBuilder.Entity<VoucherResponse>().HasNoKey();
         modelBuilder.Entity<TbStateMaster>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__TbStateM__3214EC0701F1C507");
